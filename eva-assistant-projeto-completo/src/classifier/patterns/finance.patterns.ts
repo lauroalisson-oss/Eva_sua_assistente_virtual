@@ -65,4 +65,17 @@ export const financePatterns = [
       amount: extractCurrency(text),
     }),
   },
+
+  // --- CANCELAR TRANSAÇÃO ---
+  {
+    intent: IntentType.CANCELAR_TRANSACAO,
+    confidence: 0.85,
+    patterns: [
+      /\b(cancel[ao]r?|apag[ao]r?|remov[eo]r?|delet[ao]r?|desfaz[eo]r?)\b.*(gasto|despesa|receita|transacao|lancamento)/,
+      /\b(gasto|despesa|receita|lancamento)\b.*(cancel|apag|remov|delet|desfaz)/,
+      /\b(cancel[ao]r?|apag[ao]r?|desfaz[eo]r?)\b.*(ultim[ao]|derredeir[ao])\b.*(gasto|despesa|lancamento|registro)/,
+      /\b(desfaz[eo]r?)\b.*(ultim[ao]|derredeir[ao])\b/,
+    ],
+    extractEntities: (): ExtractedEntities => ({}),
+  },
 ];

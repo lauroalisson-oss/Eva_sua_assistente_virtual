@@ -27,7 +27,12 @@ export function extractDateFromText(text: string): string | undefined {
     return format(addDays(today, 2), 'yyyy-MM-dd');
   }
 
-  // Dias da semana: "segunda", "terça", etc.
+  // "proxima semana" (segunda que vem)
+  if (/\bproxima\s+semana\b/.test(normalized)) {
+    return format(nextMonday(today), 'yyyy-MM-dd');
+  }
+
+  // Dias da semana: "segunda", "proxima quarta", "sexta que vem", etc.
   const dayMap: Record<string, (date: Date) => Date> = {
     'segunda': nextMonday,
     'terca': nextTuesday,
@@ -39,7 +44,8 @@ export function extractDateFromText(text: string): string | undefined {
   };
 
   for (const [day, nextFn] of Object.entries(dayMap)) {
-    if (new RegExp(`\\b${day}\\b`).test(normalized)) {
+    // Captura: "proxima segunda", "segunda que vem", "na segunda", "segunda-feira", "segunda"
+    if (new RegExp(`(?:proxim[ao]\\s+)?\\b${day}(?:-feira)?\\b(?:\\s+que\\s+vem)?`).test(normalized)) {
       return format(nextFn(today), 'yyyy-MM-dd');
     }
   }

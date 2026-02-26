@@ -5,6 +5,7 @@ import { audioTranscriber } from './audio-transcriber';
 import { agendaService } from '../modules/agenda/agenda.service';
 import { financeService } from '../modules/finance/finance.service';
 import { notesService } from '../modules/notes/notes.service';
+import { pdfGenerator } from '../modules/reports/pdf-generator';
 import { IntentType } from '../types';
 import { prisma } from '../config/database';
 
@@ -94,6 +95,9 @@ class MessageRouter {
       case IntentType.CANCELAR_EVENTO:
         return agendaService.cancelEvent(message.phone, entities, originalText);
 
+      case IntentType.EDITAR_EVENTO:
+        return agendaService.editEvent(message.phone, entities, originalText);
+
       // --- Financeiro ---
       case IntentType.REGISTRAR_DESPESA:
         return financeService.registerExpense(message.phone, entities, originalText);
@@ -107,6 +111,9 @@ class MessageRouter {
       case IntentType.DEFINIR_LIMITE:
         return financeService.setBudget(message.phone, entities, originalText);
 
+      case IntentType.CANCELAR_TRANSACAO:
+        return financeService.deleteLastTransaction(message.phone, entities, originalText);
+
       // --- Anotações ---
       case IntentType.ANOTAR:
         return notesService.createNote(message.phone, entities, originalText);
@@ -116,7 +123,7 @@ class MessageRouter {
 
       // --- Sistema ---
       case IntentType.RELATORIO:
-        return { text: '📊 Geração de relatórios será implementada na Fase 2. Em breve!' };
+        return pdfGenerator.generateMonthlyReport(message.phone);
 
       case IntentType.SAUDACAO:
         return {
@@ -125,7 +132,7 @@ class MessageRouter {
 
       case IntentType.AJUDA:
         return {
-          text: `🤖 *O que eu posso fazer:*\n\n📅 *Agenda:*\n• "Marca reunião amanhã às 14h"\n• "O que tenho pra hoje?"\n• "Cancela a reunião de amanhã"\n\n💰 *Financeiro:*\n• "Gastei 150 de combustível"\n• "Recebi 3.500 do cliente X"\n• "Como tá meu financeiro?"\n• "Limite de gastos: 8 mil"\n\n📝 *Anotações:*\n• "Anota: ligar pro contador segunda"\n• "Quais são minhas anotações?"\n\n📊 *Relatórios:*\n• "Relatório de fevereiro"\n\nVocê pode enviar por *texto* ou *áudio*! 🎤`,
+          text: `🤖 *O que eu posso fazer:*\n\n📅 *Agenda:*\n• "Marca reunião amanhã às 14h"\n• "O que tenho pra hoje?"\n• "Muda a reunião para sexta às 15h"\n• "Cancela a reunião de amanhã"\n\n💰 *Financeiro:*\n• "Gastei 150 de combustível"\n• "Recebi 3.500 do cliente X"\n• "Como tá meu financeiro?"\n• "Limite de gastos: 8 mil"\n• "Cancela o último gasto"\n\n📝 *Anotações:*\n• "Anota: ligar pro contador segunda"\n• "Quais são minhas anotações?"\n\n📊 *Relatórios:*\n• "Relatório de fevereiro"\n\nVocê pode enviar por *texto* ou *áudio*! 🎤`,
         };
 
       case IntentType.DESCONHECIDO:
