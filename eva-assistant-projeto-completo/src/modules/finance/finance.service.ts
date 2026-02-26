@@ -1,7 +1,6 @@
 import { ResponseMessage, ExtractedEntities } from '../../types';
 import { prisma } from '../../config/database';
 import { formatCurrencyBR, formatPercent, progressBar } from '../../utils/message-formatter';
-import { Decimal } from '@prisma/client/runtime/library';
 
 class FinanceService {
   /**

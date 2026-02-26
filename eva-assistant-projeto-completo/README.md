@@ -13,8 +13,8 @@ Assistente virtual inteligente via WhatsApp com gestão de agenda, controle fina
 ### 1. Clonar e instalar
 
 ```bash
-git clone <seu-repo>
-cd eva-assistant
+git clone https://github.com/lauroalisson-oss/Eva_sua_assistente_virtual.git
+cd Eva_sua_assistente_virtual/eva-assistant-projeto-completo
 npm install
 ```
 
