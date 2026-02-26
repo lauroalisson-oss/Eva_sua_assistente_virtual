@@ -227,33 +227,33 @@ npm run format            # Prettier
 ### Semana 1: Setup + Webhook
 - [x] Estrutura de diretórios
 - [x] CLAUDE.md
-- [ ] package.json com dependências
-- [ ] tsconfig.json
-- [ ] Docker Compose (PostgreSQL + Redis)
-- [ ] Prisma schema base (tenants, events, transactions, notes)
-- [ ] Servidor Fastify básico
-- [ ] Webhook WhatsApp (receber/enviar mensagens)
-- [ ] Variáveis de ambiente validadas (env.ts)
+- [x] package.json com dependências
+- [x] tsconfig.json
+- [x] Docker Compose (PostgreSQL + Redis)
+- [x] Prisma schema base (tenants, events, transactions, notes)
+- [x] Servidor Fastify básico
+- [x] Webhook WhatsApp (receber/enviar mensagens)
+- [x] Variáveis de ambiente validadas (env.ts)
 
 ### Semana 2: Motor Híbrido + Anotações
-- [ ] Rule Engine com patterns base
-- [ ] AI Classifier (Claude Haiku integration)
-- [ ] Hybrid Classifier (orquestrador)
-- [ ] Entity Extractor (datas, valores, etc.)
-- [ ] Módulo de Anotações (CRUD completo)
-- [ ] Parser de datas PT-BR
+- [x] Rule Engine com patterns base
+- [x] AI Classifier (Claude Haiku integration)
+- [x] Hybrid Classifier (orquestrador)
+- [x] Entity Extractor (datas, valores, etc.)
+- [x] Módulo de Anotações (CRUD completo)
+- [x] Parser de datas PT-BR
 
 ### Semana 3: Agenda
-- [ ] Módulo de Agenda (criar, listar, cancelar eventos)
-- [ ] Parser de datas naturais ("amanhã às 14h", "quarta que vem")
+- [x] Módulo de Agenda (criar, listar, cancelar eventos)
+- [x] Parser de datas naturais ("amanhã às 14h", "quarta que vem")
 - [ ] Cron de lembretes (1h antes, 1 dia antes)
 - [ ] Resumo diário automático às 7h
 
 ### Semana 4: Financeiro + Deploy
-- [ ] Módulo Financeiro (registrar receita/despesa)
-- [ ] Consulta de saldo e resumo mensal
-- [ ] Sistema de alertas de limite (70%, 90%, 100%)
-- [ ] Categorização automática (regras + IA)
+- [x] Módulo Financeiro (registrar receita/despesa)
+- [x] Consulta de saldo e resumo mensal
+- [x] Sistema de alertas de limite (70%, 90%, 100%)
+- [x] Categorização automática (regras + IA)
 - [ ] Deploy em VPS
 - [ ] Testes integrados
 
