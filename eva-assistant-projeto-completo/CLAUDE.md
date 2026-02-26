@@ -246,8 +246,8 @@ npm run format            # Prettier
 ### Semana 3: Agenda
 - [x] Módulo de Agenda (criar, listar, cancelar eventos)
 - [x] Parser de datas naturais ("amanhã às 14h", "quarta que vem")
-- [ ] Cron de lembretes (1h antes, 1 dia antes)
-- [ ] Resumo diário automático às 7h
+- [x] Cron de lembretes (1h antes, 1 dia antes)
+- [x] Resumo diário automático às 7h
 
 ### Semana 4: Financeiro + Deploy
 - [x] Módulo Financeiro (registrar receita/despesa)

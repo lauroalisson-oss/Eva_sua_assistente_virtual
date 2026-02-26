@@ -2,6 +2,8 @@ import Fastify from 'fastify';
 import { env } from './config/env';
 import { connectDatabase, disconnectDatabase } from './config/database';
 import { whatsappWebhook } from './webhooks/whatsapp.controller';
+import { reminderJob } from './modules/agenda/reminder.job';
+import { dailySummaryJob } from './jobs/daily-summary.job';
 
 const app = Fastify({
   logger: {
@@ -39,6 +41,10 @@ async function start(): Promise<void> {
 
     // Iniciar servidor
     await app.listen({ port: env.PORT, host: '0.0.0.0' });
+
+    // Iniciar jobs agendados
+    reminderJob.start();
+    dailySummaryJob.start();
 
     console.log(`
 ╔══════════════════════════════════════════╗
