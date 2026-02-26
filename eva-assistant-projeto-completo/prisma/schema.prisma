@@ -1,0 +1,174 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// TENANT (Multi-tenancy)
+// ============================================
+model Tenant {
+  id           String        @id @default(cuid())
+  name         String
+  phone        String        @unique  // Número WhatsApp principal
+  email        String?
+  plan         Plan          @default(BASIC)
+  planExpiresAt DateTime?
+  isActive     Boolean       @default(true)
+  timezone     String        @default("America/Bahia")
+  settings     Json          @default("{}")  // Configurações personalizadas
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  // Relações
+  events       Event[]
+  transactions Transaction[]
+  notes        Note[]
+  budgets      Budget[]
+
+  @@map("tenants")
+}
+
+enum Plan {
+  BASIC
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+// ============================================
+// AGENDA — Eventos e Compromissos
+// ============================================
+model Event {
+  id             String        @id @default(cuid())
+  tenantId       String
+  title          String
+  description    String?
+  location       String?
+  startAt        DateTime
+  endAt          DateTime?
+  category       EventCategory @default(WORK)
+  recurrenceRule String?       // RRULE format (ex: "FREQ=WEEKLY;BYDAY=MO")
+  reminderConfig Json          @default("[{\"minutes\": 60}, {\"minutes\": 1440}]")
+  status         EventStatus   @default(ACTIVE)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  deletedAt      DateTime?
+
+  // Relações
+  tenant         Tenant        @relation(fields: [tenantId], references: [id])
+  notes          Note[]
+
+  @@index([tenantId, startAt])
+  @@index([tenantId, status])
+  @@map("events")
+}
+
+enum EventCategory {
+  WORK
+  PERSONAL
+  FINANCIAL
+  HEALTH
+}
+
+enum EventStatus {
+  ACTIVE
+  CANCELLED
+  COMPLETED
+}
+
+// ============================================
+// FINANCEIRO — Transações
+// ============================================
+model Transaction {
+  id          String          @id @default(cuid())
+  tenantId    String
+  type        TransactionType
+  amount      Decimal         @db.Decimal(12, 2)
+  category    String          // Categoria (ex: "alimentacao", "transporte")
+  subcategory String?         // Subcategoria opcional
+  source      String?         // Fonte de receita (ex: "Smart Next", "IBGE")
+  description String
+  date        DateTime        @default(now())
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  // Relações
+  tenant      Tenant          @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, date])
+  @@index([tenantId, type, date])
+  @@index([tenantId, category])
+  @@map("transactions")
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+// ============================================
+// FINANCEIRO — Orçamentos e Limites
+// ============================================
+model Budget {
+  id             String   @id @default(cuid())
+  tenantId       String
+  month          Int      // 1-12
+  year           Int
+  globalLimit    Decimal  @db.Decimal(12, 2)
+  categoryLimits Json     @default("{}") // { "alimentacao": 2000, "transporte": 1000 }
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relações
+  tenant         Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, month, year])
+  @@map("budgets")
+}
+
+// ============================================
+// ANOTAÇÕES
+// ============================================
+model Note {
+  id            String   @id @default(cuid())
+  tenantId      String
+  content       String
+  tags          String[] // Array de tags (ex: ["urgente", "follow-up"])
+  pinned        Boolean  @default(false)
+  linkedEventId String?  // Vinculação opcional com evento
+  sourceType    String   @default("text") // "text" ou "audio"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  // Relações
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  linkedEvent   Event?   @relation(fields: [linkedEventId], references: [id])
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, pinned])
+  @@map("notes")
+}
+
+// ============================================
+// LOGS DE MENSAGENS (Analytics)
+// ============================================
+model MessageLog {
+  id               String   @id @default(cuid())
+  tenantId         String
+  direction        String   // "incoming" ou "outgoing"
+  messageType      String   // "text", "audio", "document"
+  content          String?  // Texto da mensagem (sanitizado)
+  classifiedIntent String?  // Intent detectado
+  classifierSource String?  // "rules" ou "ai"
+  confidence       Float?   // Score de confiança
+  processingTimeMs Int?     // Tempo de processamento em ms
+  createdAt        DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([classifierSource, createdAt])
+  @@map("message_logs")
+}
