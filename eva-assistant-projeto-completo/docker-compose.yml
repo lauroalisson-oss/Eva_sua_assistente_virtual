@@ -34,6 +34,67 @@ services:
       timeout: 5s
       retries: 5
 
+  evolution:
+    image: atendai/evolution-api:v2.1.1
+    container_name: eva-evolution
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # --- Servidor ---
+      SERVER_URL: http://localhost:8080
+      SERVER_PORT: 8080
+
+      # --- Autenticacao ---
+      AUTHENTICATION_API_KEY: sua-chave-evolution
+      AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "true"
+
+      # --- Banco de dados (usa o Postgres do projeto) ---
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://eva:eva_secret@postgres:5432/eva_db
+      DATABASE_CONNECTION_CLIENT_NAME: evolution_api
+
+      # --- Armazenamento ---
+      DATABASE_SAVE_DATA_INSTANCE: "true"
+      DATABASE_SAVE_DATA_NEW_MESSAGE: "true"
+      DATABASE_SAVE_MESSAGE_UPDATE: "true"
+      DATABASE_SAVE_DATA_CONTACTS: "true"
+      DATABASE_SAVE_DATA_CHATS: "true"
+
+      # --- Cache (usa o Redis do projeto) ---
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: redis://redis:6379/1
+      CACHE_REDIS_PREFIX_KEY: evolution
+      CACHE_LOCAL_ENABLED: "false"
+
+      # --- Logs ---
+      LOG_LEVEL: "WARN,ERROR"
+      LOG_COLOR: "true"
+
+      # --- WhatsApp ---
+      CONFIG_SESSION_PHONE_CLIENT: EVA Assistant
+      CONFIG_SESSION_PHONE_NAME: Chrome
+      QRCODE_LIMIT: 6
+
+      # --- Webhook global (fallback) ---
+      WEBHOOK_GLOBAL_URL: http://host.docker.internal:3000/webhook/whatsapp
+      WEBHOOK_GLOBAL_ENABLED: "false"
+      WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS: "false"
+    volumes:
+      - eva_evolution_data:/evolution/instances
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
 volumes:
   eva_postgres_data:
   eva_redis_data:
+  eva_evolution_data:
