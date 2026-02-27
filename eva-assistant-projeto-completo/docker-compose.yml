@@ -94,6 +94,37 @@ services:
       retries: 5
       start_period: 30s
 
+  # ============================================
+  # EVA App (Produção via Docker)
+  # Descomente para rodar tudo via Docker
+  # Para desenvolvimento local, use: npm run dev
+  # ============================================
+  # eva-app:
+  #   build: .
+  #   container_name: eva-app
+  #   restart: unless-stopped
+  #   ports:
+  #     - "3000:3000"
+  #   env_file:
+  #     - .env
+  #   environment:
+  #     DATABASE_URL: postgresql://eva:eva_secret@postgres:5432/eva_db
+  #     REDIS_URL: redis://redis:6379
+  #     EVOLUTION_API_URL: http://evolution:8080
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #     evolution:
+  #       condition: service_healthy
+  #   healthcheck:
+  #     test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+  #     interval: 30s
+  #     timeout: 5s
+  #     retries: 3
+  #     start_period: 15s
+
 volumes:
   eva_postgres_data:
   eva_redis_data:
