@@ -3,202 +3,234 @@ set -euo pipefail
 
 # ============================================
 # EVA — Script de Setup Automatizado
-# Executa todos os passos para rodar a EVA
+# 100% não-interativo — pode ser executado por
+# Claude Code, Claude Cowork ou CI/CD
 # ============================================
-
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+# Uso:
+#   bash scripts/setup.sh                    # Setup completo
+#   ANTHROPIC_API_KEY=sk-ant-... bash scripts/setup.sh  # Com API key via env
+#   SKIP_DOCKER=1 bash scripts/setup.sh      # Pular Docker (se já estiver rodando)
+#   SKIP_TESTS=1 bash scripts/setup.sh       # Pular testes
+# ============================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
-echo -e "${BLUE}"
-echo "╔══════════════════════════════════════════╗"
-echo "║   🤖 EVA — Setup Automatizado            ║"
-echo "╚══════════════════════════════════════════╝"
-echo -e "${NC}"
+# Flags de controle (podem ser setadas via variáveis de ambiente)
+SKIP_DOCKER="${SKIP_DOCKER:-0}"
+SKIP_TESTS="${SKIP_TESTS:-0}"
+
+echo ""
+echo "============================================"
+echo "  EVA — Setup Automatizado"
+echo "============================================"
+echo ""
 
 cd "$PROJECT_DIR"
 
+ERRORS=0
+
 # ============================================
-# 1. Verificar pré-requisitos
+# PASSO 1: Verificar pré-requisitos
 # ============================================
-echo -e "${YELLOW}[1/7] Verificando pré-requisitos...${NC}"
+echo "[1/6] Verificando pre-requisitos..."
 
 # Node.js
 if ! command -v node &> /dev/null; then
-  echo -e "${RED}❌ Node.js não encontrado. Instale Node.js >= 20.${NC}"
+  echo "  ERRO: Node.js nao encontrado. Instale Node.js >= 20."
   exit 1
 fi
 
 NODE_VERSION=$(node -v | sed 's/v//' | cut -d. -f1)
 if [ "$NODE_VERSION" -lt 20 ]; then
-  echo -e "${RED}❌ Node.js $NODE_VERSION encontrado, mas >= 20 é necessário.${NC}"
+  echo "  ERRO: Node.js $NODE_VERSION encontrado, mas >= 20 eh necessario."
   exit 1
 fi
-echo -e "  ✅ Node.js $(node -v)"
+echo "  OK: Node.js $(node -v)"
 
 # npm
 if ! command -v npm &> /dev/null; then
-  echo -e "${RED}❌ npm não encontrado.${NC}"
+  echo "  ERRO: npm nao encontrado."
   exit 1
 fi
-echo -e "  ✅ npm $(npm -v)"
+echo "  OK: npm $(npm -v)"
 
-# Docker
-if ! command -v docker &> /dev/null; then
-  echo -e "${RED}❌ Docker não encontrado. Instale Docker Desktop ou Docker Engine.${NC}"
-  exit 1
-fi
-echo -e "  ✅ Docker $(docker --version | grep -oP '\d+\.\d+\.\d+')"
+# Docker (apenas se não pular)
+if [ "$SKIP_DOCKER" = "0" ]; then
+  if ! command -v docker &> /dev/null; then
+    echo "  ERRO: Docker nao encontrado."
+    exit 1
+  fi
+  echo "  OK: Docker encontrado"
 
-# Docker Compose
-if docker compose version &> /dev/null; then
-  COMPOSE_CMD="docker compose"
-elif command -v docker-compose &> /dev/null; then
-  COMPOSE_CMD="docker-compose"
+  if docker compose version &> /dev/null; then
+    COMPOSE_CMD="docker compose"
+  elif command -v docker-compose &> /dev/null; then
+    COMPOSE_CMD="docker-compose"
+  else
+    echo "  ERRO: Docker Compose nao encontrado."
+    exit 1
+  fi
+  echo "  OK: Docker Compose encontrado"
 else
-  echo -e "${RED}❌ Docker Compose não encontrado.${NC}"
-  exit 1
+  echo "  PULANDO: Docker (SKIP_DOCKER=1)"
 fi
-echo -e "  ✅ Docker Compose encontrado"
 
 # ============================================
-# 2. Configurar .env
+# PASSO 2: Configurar .env
 # ============================================
 echo ""
-echo -e "${YELLOW}[2/7] Configurando variáveis de ambiente...${NC}"
+echo "[2/6] Configurando variaveis de ambiente..."
 
 if [ ! -f ".env" ]; then
   cp .env.example .env
-  echo -e "  📄 Arquivo .env criado a partir do .env.example"
-  echo ""
-  echo -e "${YELLOW}  ⚠️  IMPORTANTE: Edite o .env com suas chaves reais:${NC}"
-  echo -e "     - ${RED}ANTHROPIC_API_KEY${NC} (obrigatório) → https://console.anthropic.com/"
-  echo -e "     - GROQ_API_KEY (opcional, para áudio) → https://console.groq.com/"
-  echo -e "     - AUTHORIZED_PHONES (seu número com DDI+DDD)"
-  echo ""
+  echo "  CRIADO: .env a partir de .env.example"
+else
+  echo "  OK: .env ja existe"
+fi
 
-  # Verificar se ANTHROPIC_API_KEY já foi preenchida
-  if grep -q "sk-ant-sua-chave-aqui" .env; then
-    echo -e "${RED}  ❌ ANTHROPIC_API_KEY não configurada!${NC}"
-    echo -e "     Edite o arquivo .env e rode este script novamente."
-    echo ""
-    read -p "  Deseja continuar mesmo assim? (s/N) " -n 1 -r
-    echo ""
-    if [[ ! $REPLY =~ ^[Ss]$ ]]; then
-      echo -e "  Edite ${BLUE}.env${NC} e rode: ${GREEN}bash scripts/setup.sh${NC}"
-      exit 0
+# Se ANTHROPIC_API_KEY foi passada via ambiente, injetar no .env
+if [ -n "${ANTHROPIC_API_KEY:-}" ] && [ "$ANTHROPIC_API_KEY" != "sk-ant-sua-chave-aqui" ]; then
+  sed -i "s|^ANTHROPIC_API_KEY=.*|ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY|" .env
+  echo "  OK: ANTHROPIC_API_KEY configurada via variavel de ambiente"
+fi
+
+# Se GROQ_API_KEY foi passada via ambiente, injetar no .env
+if [ -n "${GROQ_API_KEY:-}" ] && [ "$GROQ_API_KEY" != "gsk_sua-chave-aqui" ]; then
+  sed -i "s|^GROQ_API_KEY=.*|GROQ_API_KEY=$GROQ_API_KEY|" .env
+  echo "  OK: GROQ_API_KEY configurada via variavel de ambiente"
+fi
+
+# Se EVOLUTION_API_KEY foi passada via ambiente, injetar no .env
+if [ -n "${EVOLUTION_API_KEY:-}" ] && [ "$EVOLUTION_API_KEY" != "sua-chave-evolution" ]; then
+  sed -i "s|^EVOLUTION_API_KEY=.*|EVOLUTION_API_KEY=$EVOLUTION_API_KEY|" .env
+  echo "  OK: EVOLUTION_API_KEY configurada via variavel de ambiente"
+fi
+
+# Se AUTHORIZED_PHONES foi passada via ambiente, injetar no .env
+if [ -n "${AUTHORIZED_PHONES:-}" ] && [ "$AUTHORIZED_PHONES" != "5575999999999" ]; then
+  sed -i "s|^AUTHORIZED_PHONES=.*|AUTHORIZED_PHONES=$AUTHORIZED_PHONES|" .env
+  echo "  OK: AUTHORIZED_PHONES configurado via variavel de ambiente"
+fi
+
+# Validar que chaves criticas existem (avisar mas nao bloquear)
+if grep -q "sk-ant-sua-chave-aqui" .env; then
+  echo "  AVISO: ANTHROPIC_API_KEY ainda eh placeholder. O classificador AI nao vai funcionar."
+  echo "         O rule engine (classificador por regras) continuara funcionando."
+fi
+
+# ============================================
+# PASSO 3: Subir infraestrutura Docker
+# ============================================
+echo ""
+echo "[3/6] Subindo infraestrutura Docker..."
+
+if [ "$SKIP_DOCKER" = "0" ]; then
+  $COMPOSE_CMD up -d postgres redis evolution 2>&1
+
+  echo "  Aguardando PostgreSQL..."
+  for i in $(seq 1 30); do
+    if $COMPOSE_CMD exec -T postgres pg_isready -U eva -d eva_db &> /dev/null; then
+      echo "  OK: PostgreSQL pronto"
+      break
     fi
-  fi
+    if [ "$i" -eq 30 ]; then
+      echo "  ERRO: PostgreSQL nao respondeu em 30 segundos"
+      exit 1
+    fi
+    sleep 1
+  done
+
+  echo "  Aguardando Redis..."
+  for i in $(seq 1 15); do
+    if $COMPOSE_CMD exec -T redis redis-cli ping 2>/dev/null | grep -q PONG; then
+      echo "  OK: Redis pronto"
+      break
+    fi
+    if [ "$i" -eq 15 ]; then
+      echo "  ERRO: Redis nao respondeu em 15 segundos"
+      exit 1
+    fi
+    sleep 1
+  done
+
+  echo "  OK: Evolution API iniciando em background"
 else
-  echo -e "  ✅ Arquivo .env já existe"
+  echo "  PULANDO: Docker (SKIP_DOCKER=1)"
+  echo "  Certifique-se que Postgres e Redis estao rodando"
 fi
 
 # ============================================
-# 3. Subir infraestrutura Docker
+# PASSO 4: Instalar dependencias
 # ============================================
 echo ""
-echo -e "${YELLOW}[3/7] Subindo infraestrutura (Postgres + Redis + Evolution API)...${NC}"
+echo "[4/6] Instalando dependencias Node.js..."
 
-$COMPOSE_CMD up -d
-
-echo -e "  ⏳ Aguardando serviços ficarem saudáveis..."
-
-# Aguardar Postgres
-for i in {1..30}; do
-  if $COMPOSE_CMD exec -T postgres pg_isready -U eva -d eva_db &> /dev/null; then
-    echo -e "  ✅ PostgreSQL pronto"
-    break
-  fi
-  if [ "$i" -eq 30 ]; then
-    echo -e "${RED}  ❌ PostgreSQL não respondeu em 30s${NC}"
-    exit 1
-  fi
-  sleep 1
-done
-
-# Aguardar Redis
-for i in {1..15}; do
-  if $COMPOSE_CMD exec -T redis redis-cli ping 2>/dev/null | grep -q PONG; then
-    echo -e "  ✅ Redis pronto"
-    break
-  fi
-  if [ "$i" -eq 15 ]; then
-    echo -e "${RED}  ❌ Redis não respondeu em 15s${NC}"
-    exit 1
-  fi
-  sleep 1
-done
-
-echo -e "  ✅ Evolution API iniciando (pode levar ~30s no primeiro boot)"
+npm install --no-audit --no-fund 2>&1 | tail -5
+echo "  OK: Dependencias instaladas"
 
 # ============================================
-# 4. Instalar dependências
+# PASSO 5: Gerar Prisma Client + Migrations
 # ============================================
 echo ""
-echo -e "${YELLOW}[4/7] Instalando dependências Node.js...${NC}"
+echo "[5/6] Configurando banco de dados (Prisma)..."
 
-npm install --no-audit --no-fund 2>&1 | tail -3
-echo -e "  ✅ Dependências instaladas"
+npx prisma generate 2>&1 | tail -2
+echo "  OK: Prisma Client gerado"
 
-# ============================================
-# 5. Gerar Prisma Client + Migration
-# ============================================
-echo ""
-echo -e "${YELLOW}[5/7] Configurando banco de dados...${NC}"
-
-npx prisma generate 2>&1 | tail -1
-echo -e "  ✅ Prisma Client gerado"
-
-# Verificar se já existem migrations
-if [ ! -d "prisma/migrations" ] || [ -z "$(ls -A prisma/migrations 2>/dev/null)" ]; then
-  echo -e "  🗃️  Criando migration inicial..."
-  npx prisma migrate dev --name init --skip-seed 2>&1 | tail -3
-  echo -e "  ✅ Migration inicial criada e aplicada"
+if [ "$SKIP_DOCKER" = "0" ]; then
+  # Verificar se migrations existem
+  if [ -d "prisma/migrations/0001_init" ]; then
+    echo "  Aplicando migrations existentes..."
+    npx prisma migrate deploy 2>&1 | tail -3
+    echo "  OK: Migrations aplicadas com prisma migrate deploy"
+  else
+    echo "  Criando migration inicial..."
+    npx prisma migrate dev --name init --skip-seed 2>&1 | tail -3
+    echo "  OK: Migration inicial criada e aplicada"
+  fi
 else
-  echo -e "  🗃️  Aplicando migrations pendentes..."
-  npx prisma migrate dev --skip-seed 2>&1 | tail -3
-  echo -e "  ✅ Migrations aplicadas"
+  echo "  PULANDO: migrate (SKIP_DOCKER=1, sem banco disponivel)"
 fi
 
 # ============================================
-# 6. Rodar testes
+# PASSO 6: Rodar testes
 # ============================================
 echo ""
-echo -e "${YELLOW}[6/7] Rodando testes...${NC}"
+echo "[6/6] Rodando testes..."
 
-if npx vitest run 2>&1 | tail -5; then
-  echo -e "  ✅ Todos os testes passaram"
+if [ "$SKIP_TESTS" = "0" ]; then
+  if npx vitest run 2>&1; then
+    echo "  OK: Todos os testes passaram"
+  else
+    echo "  AVISO: Alguns testes falharam"
+    ERRORS=$((ERRORS + 1))
+  fi
 else
-  echo -e "${YELLOW}  ⚠️  Alguns testes falharam (verifique acima)${NC}"
+  echo "  PULANDO: Testes (SKIP_TESTS=1)"
 fi
 
 # ============================================
-# 7. Instruções finais
+# RESULTADO FINAL
 # ============================================
 echo ""
-echo -e "${GREEN}╔══════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}║   ✅ Setup concluído com sucesso!        ║${NC}"
-echo -e "${GREEN}╚══════════════════════════════════════════╝${NC}"
+echo "============================================"
+if [ "$ERRORS" -eq 0 ]; then
+  echo "  SETUP CONCLUIDO COM SUCESSO"
+else
+  echo "  SETUP CONCLUIDO COM $ERRORS AVISO(S)"
+fi
+echo "============================================"
 echo ""
-echo -e "Para iniciar a EVA:"
-echo -e "  ${GREEN}npm run dev${NC}"
+echo "Proximos passos:"
+echo "  1. Iniciar a EVA:         npm run dev"
+echo "  2. Testar health check:   curl http://localhost:3000/health"
+echo "  3. Simular mensagens:     bash scripts/test-webhook.sh"
 echo ""
-echo -e "Para configurar o WhatsApp:"
-echo -e "  1. Acesse ${BLUE}http://localhost:8080${NC} (Evolution API)"
-echo -e "  2. Crie uma instância chamada ${BLUE}eva-bot${NC}"
-echo -e "  3. Escaneie o QR code com seu WhatsApp"
-echo -e "  4. Configure o webhook para: ${BLUE}http://host.docker.internal:3000/webhook/whatsapp${NC}"
+echo "Endpoints:"
+echo "  Health:  http://localhost:3000/health"
+echo "  Webhook: http://localhost:3000/webhook/whatsapp"
+echo "  Admin:   http://localhost:3000/api/admin/tenants"
 echo ""
-echo -e "Para testar sem WhatsApp (simular webhook):"
-echo -e "  ${GREEN}bash scripts/test-webhook.sh${NC}"
-echo ""
-echo -e "Endpoints úteis:"
-echo -e "  Health:  ${BLUE}http://localhost:3000/health${NC}"
-echo -e "  Admin:   ${BLUE}http://localhost:3000/api/admin/tenants${NC}"
-echo -e "  Webhook: ${BLUE}http://localhost:3000/webhook/whatsapp${NC}"
-echo ""
+
+exit $ERRORS
