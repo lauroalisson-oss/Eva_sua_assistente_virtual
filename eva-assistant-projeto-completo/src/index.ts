@@ -2,8 +2,11 @@ import Fastify from 'fastify';
 import { env } from './config/env';
 import { connectDatabase, disconnectDatabase } from './config/database';
 import { whatsappWebhook } from './webhooks/whatsapp.controller';
+import { adminRoutes } from './webhooks/admin.controller';
 import { reminderJob } from './modules/agenda/reminder.job';
 import { dailySummaryJob } from './jobs/daily-summary.job';
+import { disconnectRateLimiter } from './middleware/rate-limiter';
+import { disconnectWebhookSecurity } from './middleware/webhook-security';
 
 const app = Fastify({
   logger: {
@@ -31,6 +34,9 @@ app.post('/webhook/whatsapp', whatsappWebhook);
 app.get('/webhook/whatsapp', async (request, reply) => {
   reply.send({ status: 'webhook active' });
 });
+
+// Admin API (protegida por API key)
+app.register(adminRoutes, { prefix: '/api/admin' });
 
 // ============ STARTUP ============
 
@@ -65,6 +71,8 @@ signals.forEach((signal) => {
   process.on(signal, async () => {
     console.log(`\n🛑 Recebido ${signal}, encerrando...`);
     await app.close();
+    await disconnectRateLimiter();
+    await disconnectWebhookSecurity();
     await disconnectDatabase();
     process.exit(0);
   });
