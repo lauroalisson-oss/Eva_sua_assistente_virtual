@@ -1,6 +1,7 @@
 import { ResponseMessage, ExtractedEntities } from '../../types';
 import { prisma } from '../../config/database';
 import { formatCurrencyBR, formatPercent, progressBar } from '../../utils/message-formatter';
+import { auditLog } from '../../middleware/audit-logger';
 
 class FinanceService {
   /**
@@ -25,6 +26,10 @@ class FinanceService {
           description: originalText.substring(0, 200),
           date: new Date(),
         },
+      });
+
+      await auditLog(phone, 'CREATE', 'Transaction', transaction.id, {
+        type: 'EXPENSE', amount: entities.amount, category: entities.category || 'outros',
       });
 
       // Verificar limites
@@ -56,7 +61,7 @@ class FinanceService {
         return { text: '💰 Não identifiquei o valor. Pode repetir? Ex: "Recebi 3.500 do cliente X"' };
       }
 
-      await prisma.transaction.create({
+      const incomeTransaction = await prisma.transaction.create({
         data: {
           tenantId: phone,
           type: 'INCOME',
@@ -66,6 +71,10 @@ class FinanceService {
           description: originalText.substring(0, 200),
           date: new Date(),
         },
+      });
+
+      await auditLog(phone, 'CREATE', 'Transaction', incomeTransaction.id, {
+        type: 'INCOME', amount: entities.amount, category: entities.category || 'outros',
       });
 
       return {
@@ -167,7 +176,7 @@ class FinanceService {
 
       const now = new Date();
 
-      await prisma.budget.upsert({
+      const budget = await prisma.budget.upsert({
         where: {
           tenantId_month_year: {
             tenantId: phone,
@@ -184,6 +193,10 @@ class FinanceService {
         update: {
           globalLimit: entities.amount,
         },
+      });
+
+      await auditLog(phone, 'UPDATE', 'Budget', budget.id, {
+        globalLimit: entities.amount, month: now.getMonth() + 1, year: now.getFullYear(),
       });
 
       return {
@@ -219,6 +232,10 @@ class FinanceService {
 
       await prisma.transaction.delete({
         where: { id: lastTransaction.id },
+      });
+
+      await auditLog(phone, 'DELETE', 'Transaction', lastTransaction.id, {
+        type: lastTransaction.type, amount, category: lastTransaction.category,
       });
 
       return {

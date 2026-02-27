@@ -2,6 +2,7 @@ import { ResponseMessage, ExtractedEntities } from '../../types';
 import { prisma } from '../../config/database';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { auditLog } from '../../middleware/audit-logger';
 
 class NotesService {
   /**
@@ -24,6 +25,8 @@ class NotesService {
           sourceType: 'text',
         },
       });
+
+      await auditLog(phone, 'CREATE', 'Note', note.id, { contentPreview: content.substring(0, 100) });
 
       const tags = note.tags.length > 0 ? `\n🏷️ ${note.tags.map(t => `#${t}`).join(' ')}` : '';
 

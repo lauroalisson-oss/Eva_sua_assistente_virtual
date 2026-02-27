@@ -1,6 +1,7 @@
 import { ResponseMessage, ExtractedEntities } from '../../types';
 import { prisma } from '../../config/database';
 import { formatDateBR } from '../../utils/message-formatter';
+import { auditLog } from '../../middleware/audit-logger';
 
 class AgendaService {
   /**
@@ -26,6 +27,8 @@ class AgendaService {
           reminderConfig: JSON.stringify([{ minutes: 60 }, { minutes: 1440 }]),
         },
       });
+
+      await auditLog(phone, 'CREATE', 'Event', event.id, { title, startAt: startAt.toISOString() });
 
       return {
         text: `Compromisso agendado! ✅\n\n📅 *${event.title}*\n${entities.location ? `📍 ${entities.location}\n` : ''}⏰ ${formatDateBR(event.startAt)}\n\nVou te avisar 1 dia antes e 1 hora antes. 🔔`,
@@ -104,6 +107,8 @@ class AgendaService {
         data: { status: 'CANCELLED' },
       });
 
+      await auditLog(phone, 'UPDATE', 'Event', event.id, { status: { from: 'ACTIVE', to: 'CANCELLED' } });
+
       return {
         text: `Compromisso cancelado! ❌\n\n📅 ~~${event.title}~~\n⏰ ${formatDateBR(event.startAt)}`,
       };
@@ -170,6 +175,10 @@ class AgendaService {
       await prisma.event.update({
         where: { id: event.id },
         data: updateData,
+      });
+
+      await auditLog(phone, 'UPDATE', 'Event', event.id, {
+        startAt: updateData.startAt ? { from: event.startAt.toISOString(), to: (updateData.startAt as Date).toISOString() } : undefined,
       });
 
       return {
