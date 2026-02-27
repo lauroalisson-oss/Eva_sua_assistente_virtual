@@ -154,6 +154,25 @@ model Note {
 }
 
 // ============================================
+// AUDIT LOG (Rastreamento de ações)
+// ============================================
+model AuditLog {
+  id         String   @id @default(cuid())
+  tenantId   String
+  action     String   // "CREATE", "UPDATE", "DELETE"
+  entity     String   // "Event", "Transaction", "Note", "Budget"
+  entityId   String   // ID do registro afetado
+  changes    Json?    // { field: { from: old, to: new } }
+  metadata   Json?    // Contexto adicional (IP, source, etc)
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([entity, entityId])
+  @@index([action, createdAt])
+  @@map("audit_logs")
+}
+
+// ============================================
 // LOGS DE MENSAGENS (Analytics)
 // ============================================
 model MessageLog {

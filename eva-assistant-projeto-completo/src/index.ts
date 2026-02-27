@@ -1,10 +1,13 @@
 import Fastify from 'fastify';
+import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
 import { env } from './config/env';
 import { connectDatabase, disconnectDatabase } from './config/database';
 import { whatsappWebhook } from './webhooks/whatsapp.controller';
 import { adminRoutes } from './webhooks/admin.controller';
-import { reminderJob } from './modules/agenda/reminder.job';
-import { dailySummaryJob } from './jobs/daily-summary.job';
+import { startReminderJob } from './modules/agenda/reminder.job';
+import { startDailySummaryJob } from './jobs/daily-summary.job';
+import { disconnectQueues } from './config/queue';
 import { disconnectRateLimiter } from './middleware/rate-limiter';
 import { disconnectWebhookSecurity } from './middleware/webhook-security';
 
@@ -16,6 +19,22 @@ const app = Fastify({
         ? { target: 'pino-pretty', options: { colorize: true, translateTime: 'HH:MM:ss' } }
         : undefined,
   },
+});
+
+// ============ SECURITY PLUGINS ============
+
+// CORS — permite chamadas da Admin UI / painéis externos
+app.register(cors, {
+  origin: env.NODE_ENV === 'production'
+    ? false  // Em produção, desabilitar ou configurar origens específicas
+    : true,  // Em desenvolvimento, permitir qualquer origem
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  credentials: true,
+});
+
+// Helmet — headers de segurança HTTP
+app.register(helmet, {
+  contentSecurityPolicy: false,  // Desabilitado porque a API não serve HTML
 });
 
 // ============ GLOBAL ERROR HANDLER ============
@@ -103,9 +122,9 @@ async function start(): Promise<void> {
     // Iniciar servidor
     await app.listen({ port: env.PORT, host: '0.0.0.0' });
 
-    // Iniciar jobs agendados
-    reminderJob.start();
-    dailySummaryJob.start();
+    // Iniciar jobs agendados via BullMQ
+    await startReminderJob();
+    await startDailySummaryJob();
 
     console.log(`
 ╔══════════════════════════════════════════╗
@@ -126,6 +145,7 @@ signals.forEach((signal) => {
   process.on(signal, async () => {
     console.log(`\n🛑 Recebido ${signal}, encerrando...`);
     await app.close();
+    await disconnectQueues();
     await disconnectRateLimiter();
     await disconnectWebhookSecurity();
     await disconnectDatabase();
