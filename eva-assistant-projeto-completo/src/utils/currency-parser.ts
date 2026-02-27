@@ -29,10 +29,16 @@ export function extractCurrency(text: string): number | undefined {
     return parseBRL(reaisMatch[1]);
   }
 
-  // Último recurso: qualquer número no texto
+  // Último recurso: qualquer número no texto (simples ou formatado BRL)
   const anyNumber = normalized.match(/\b(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?)\b/);
   if (anyNumber) {
     return parseBRL(anyNumber[1]);
+  }
+
+  // Número simples de 4+ dígitos sem formatação (5000, 8000, 15000)
+  const plainNumber = normalized.match(/\b(\d{4,})\b/);
+  if (plainNumber) {
+    return parseInt(plainNumber[1]);
   }
 
   return undefined;

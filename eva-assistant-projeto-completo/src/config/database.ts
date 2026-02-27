@@ -5,9 +5,19 @@ const basePrisma = new PrismaClient({
   log: env.NODE_ENV === 'development' ? ['query', 'warn', 'error'] : ['error'],
 });
 
+// Modelos que possuem tenantId e requerem isolamento
+const TENANT_MODELS = ['Event', 'Transaction', 'Budget', 'Note', 'MessageLog'];
+
+// Operações de leitura que devem filtrar por tenantId
+const READ_OPERATIONS = ['findFirst', 'findMany', 'findUnique', 'count', 'aggregate', 'groupBy'];
+
+// Operações de escrita que devem validar tenantId
+const WRITE_OPERATIONS = ['update', 'updateMany', 'delete', 'deleteMany'];
+
 /**
- * Extensão para log de queries lentas.
- * Usa a API $extends (substitui o deprecado $use).
+ * Prisma client com extensões:
+ * 1. Log de queries lentas (>500ms)
+ * 2. Row-Level Security: injeta tenantId automaticamente em queries de modelos multi-tenant
  */
 export const prisma = basePrisma.$extends({
   query: {
@@ -24,6 +34,71 @@ export const prisma = basePrisma.$extends({
     },
   },
 });
+
+/**
+ * Cria um Prisma client com escopo de tenant (Row-Level Security).
+ * Todas as queries em modelos multi-tenant são automaticamente filtradas
+ * pelo tenantId fornecido, impedindo acesso cruzado entre tenants.
+ *
+ * Uso: const scopedPrisma = createTenantScope('cuid_do_tenant');
+ */
+export function createTenantScope(tenantId: string) {
+  return basePrisma.$extends({
+    query: {
+      async $allOperations({ operation, model, args, query }) {
+        // Não aplicar RLS em modelos que não têm tenantId
+        if (!model || !TENANT_MODELS.includes(model)) {
+          return query(args);
+        }
+
+        const mutableArgs = { ...args } as Record<string, unknown>;
+
+        // Injetar tenantId em operações de leitura
+        if (READ_OPERATIONS.includes(operation)) {
+          const where = (mutableArgs.where || {}) as Record<string, unknown>;
+          where.tenantId = tenantId;
+          mutableArgs.where = where;
+        }
+
+        // Injetar tenantId em operações de escrita (where clause)
+        if (WRITE_OPERATIONS.includes(operation)) {
+          const where = (mutableArgs.where || {}) as Record<string, unknown>;
+          where.tenantId = tenantId;
+          mutableArgs.where = where;
+        }
+
+        // Injetar tenantId em create
+        if (operation === 'create') {
+          const data = (mutableArgs.data || {}) as Record<string, unknown>;
+          data.tenantId = tenantId;
+          mutableArgs.data = data;
+        }
+
+        // Injetar tenantId em createMany
+        if (operation === 'createMany') {
+          const data = mutableArgs.data;
+          if (Array.isArray(data)) {
+            mutableArgs.data = data.map((item: Record<string, unknown>) => ({
+              ...item,
+              tenantId,
+            }));
+          }
+        }
+
+        // Log de queries lentas
+        const start = Date.now();
+        const result = await query(mutableArgs);
+        const duration = Date.now() - start;
+
+        if (duration > 500) {
+          console.warn(`⚠️ Query lenta (${duration}ms): ${model}.${operation} [tenant:${tenantId.slice(-6)}]`);
+        }
+
+        return result;
+      },
+    },
+  });
+}
 
 export async function connectDatabase(): Promise<void> {
   try {

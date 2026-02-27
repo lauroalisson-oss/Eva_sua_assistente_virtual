@@ -18,21 +18,76 @@ const app = Fastify({
   },
 });
 
+// ============ GLOBAL ERROR HANDLER ============
+
+app.setErrorHandler((error, request, reply) => {
+  const statusCode = error.statusCode || 500;
+
+  // Logar o erro com contexto
+  request.log.error({
+    err: error,
+    url: request.url,
+    method: request.method,
+    statusCode,
+  }, `❌ ${error.message}`);
+
+  // Não vazar detalhes internos em produção
+  if (statusCode >= 500 && env.NODE_ENV === 'production') {
+    reply.status(500).send({ error: 'Internal Server Error' });
+  } else {
+    reply.status(statusCode).send({
+      error: error.message,
+      statusCode,
+    });
+  }
+});
+
+// ============ REQUEST LOGGING ============
+
+app.addHook('onResponse', (request, reply, done) => {
+  // Não logar health checks para reduzir ruído
+  if (request.url === '/health') {
+    done();
+    return;
+  }
+
+  const duration = reply.elapsedTime;
+  const level = reply.statusCode >= 400 ? 'warn' : 'info';
+
+  request.log[level]({
+    method: request.method,
+    url: request.url,
+    statusCode: reply.statusCode,
+    durationMs: Math.round(duration),
+  }, `${request.method} ${request.url} → ${reply.statusCode} (${Math.round(duration)}ms)`);
+
+  done();
+});
+
 // ============ ROTAS ============
 
-// Health check
-app.get('/health', async () => ({
-  status: 'ok',
-  timestamp: new Date().toISOString(),
-  env: env.NODE_ENV,
-}));
+// Health check (expandido com métricas)
+app.get('/health', async () => {
+  const memUsage = process.memoryUsage();
+  return {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    env: env.NODE_ENV,
+    uptime: Math.round(process.uptime()),
+    memory: {
+      rss: Math.round(memUsage.rss / 1024 / 1024),
+      heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024),
+      heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024),
+    },
+  };
+});
 
 // Webhook do WhatsApp (Evolution API)
 app.post('/webhook/whatsapp', whatsappWebhook);
 
 // Verificação do webhook (GET para validação)
-app.get('/webhook/whatsapp', async (request, reply) => {
-  reply.send({ status: 'webhook active' });
+app.get('/webhook/whatsapp', async () => {
+  return { status: 'webhook active' };
 });
 
 // Admin API (protegida por API key)
@@ -76,6 +131,16 @@ signals.forEach((signal) => {
     await disconnectDatabase();
     process.exit(0);
   });
+});
+
+// Capturar erros não tratados
+process.on('unhandledRejection', (reason) => {
+  console.error('❌ Unhandled Rejection:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  process.exit(1);
 });
 
 start();
