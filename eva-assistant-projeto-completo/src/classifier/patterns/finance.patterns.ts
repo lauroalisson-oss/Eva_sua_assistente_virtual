@@ -8,10 +8,10 @@ export const financePatterns = [
     intent: IntentType.REGISTRAR_DESPESA,
     confidence: 0.85,
     patterns: [
-      /\b(gast[eoi]|pagu?[eoi]|comprei|despesa)\b.*\b(\d+[.,]?\d*)\b/,
-      /\b(r\$\s*\d|(\d+[.,]?\d*)\s*(reais|real|conto))\b.*\b(gast|pag|compr|despes)/,
+      /\b(gastei|gastou|gasto|paguei|pagou|comprei|despesa)\b.*\b(\d+[.,]?\d*)\b/,
+      /\b(r\$\s*\d|(\d+[.,]?\d*)\s*(reais|real|conto))\b.*(gast|pag|compr|despes)/,
       /\b(\d+[.,]?\d*)\b.*(reais|real|conto)?.*(gast|pag|compr)/,
-      /\b(gast[eoi]|pagu?[eoi]|comprei)\b/,
+      /\b(gastei|gastou|paguei|pagou|comprei)\b/,
     ],
     extractEntities: (text: string): ExtractedEntities => ({
       amount: extractCurrency(text),
@@ -24,9 +24,9 @@ export const financePatterns = [
     intent: IntentType.REGISTRAR_RECEITA,
     confidence: 0.85,
     patterns: [
-      /\b(receb[ei]|entrada|fatur[eoi]|vend[ei])\b.*\b(\d+[.,]?\d*)\b/,
+      /\b(recebi|recebeu|entrada|faturei|faturou|vendi|vendeu)\b.*\b(\d+[.,]?\d*)\b/,
       /\b(\d+[.,]?\d*)\b.*(reais|real|conto)?.*(receb|entrada|fatur|vend)/,
-      /\b(receb[ei]|entrada|fatur[eoi]|vend[ei])\b/,
+      /\b(recebi|recebeu|entrada|faturei|faturou|vendi|vendeu)\b/,
     ],
     extractEntities: (text: string): ExtractedEntities => ({
       amount: extractCurrency(text),
@@ -39,7 +39,7 @@ export const financePatterns = [
     intent: IntentType.CONSULTAR_SALDO,
     confidence: 0.9,
     patterns: [
-      /\b(saldo|balanc[oe]|financeiro|quanto\s+gast[eoi])\b/,
+      /\b(saldo|balanco|balancoo|financeiro|quanto\s+gastei|quanto\s+gastou)\b/,
       /\b(como\s+(ta|esta))\b.*(financeiro|gasto|despesa|dinheiro)/,
       /\b(resumo|extrato)\b.*(financeiro|gasto|despesa|mes)/,
       /\b(quanto)\b.*(gast[eoi]|sobr[oua]|rest[aou]|falt[aou])\b/,
@@ -69,12 +69,12 @@ export const financePatterns = [
   // --- CANCELAR TRANSAÇÃO ---
   {
     intent: IntentType.CANCELAR_TRANSACAO,
-    confidence: 0.85,
+    confidence: 0.92,
     patterns: [
-      /\b(cancel[ao]r?|apag[ao]r?|remov[eo]r?|delet[ao]r?|desfaz[eo]r?)\b.*(gasto|despesa|receita|transacao|lancamento)/,
+      /\b(cancel[ao]r?|apag[ao]r?|remov[eo]r?|delet[ao]r?|desfaz(?:[eo]r?)?)\b.*(gasto|despesa|receita|transacao|lancamento)/,
       /\b(gasto|despesa|receita|lancamento)\b.*(cancel|apag|remov|delet|desfaz)/,
-      /\b(cancel[ao]r?|apag[ao]r?|desfaz[eo]r?)\b.*(ultim[ao]|derredeir[ao])\b.*(gasto|despesa|lancamento|registro)/,
-      /\b(desfaz[eo]r?)\b.*(ultim[ao]|derredeir[ao])\b/,
+      /\b(cancel[ao]r?|apag[ao]r?|desfaz(?:[eo]r?)?)\b.*(ultim[ao]|derredeir[ao])\b.*(gasto|despesa|lancamento|registro)/,
+      /\b(desfaz(?:[eo]r?)?)\b.*(ultim[ao]|derredeir[ao])\b/,
     ],
     extractEntities: (): ExtractedEntities => ({}),
   },

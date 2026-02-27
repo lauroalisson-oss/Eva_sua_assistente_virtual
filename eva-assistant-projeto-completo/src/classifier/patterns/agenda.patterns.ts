@@ -30,7 +30,7 @@ export const agendaPatterns = [
     patterns: [
       /\b(o que|quais?)\b.*(tenho|tem).*(hoje|amanha|semana|mes)/,
       /\b(minha|meu)\b.*(agenda|compromissos?|eventos?)/,
-      /\b(agenda|compromissos?)\b.*(hoje|amanha|semana|proxim)/,
+      /\b(agenda|compromissos?)\b.*(hoje|amanha|semana|mes|proxim)/,
       /\b(como (ta|esta)|qual)\b.*(minha)?\b.*(agenda)/,
       /\blistar?\b.*(agenda|compromissos?|eventos?)/,
     ],
