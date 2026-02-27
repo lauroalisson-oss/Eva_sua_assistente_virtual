@@ -37,6 +37,9 @@
     "pino-pretty": "^11.2.0",
     "zod": "^3.23.0"
   },
+  "optionalDependencies": {
+    "puppeteer": "^23.0.0"
+  },
   "devDependencies": {
     "@types/node": "^20.14.0",
     "@types/node-cron": "^3.0.11",

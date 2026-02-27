@@ -1,6 +1,6 @@
 import { IntentType, ExtractedEntities } from '../../types';
 import { extractDateFromText, extractTimeFromText } from '../../utils/date-parser';
-import { extractAfterKeyword } from '../../utils/text-helpers';
+import { extractAfterKeyword, extractPerson, extractLocation } from '../../utils/text-helpers';
 
 export const agendaPatterns = [
   // --- AGENDAR ---
@@ -18,6 +18,8 @@ export const agendaPatterns = [
       date: extractDateFromText(text),
       time: extractTimeFromText(text),
       title: extractAfterKeyword(text, ['reuniao', 'encontro', 'compromisso', 'consulta']),
+      person: extractPerson(text),
+      location: extractLocation(text),
     }),
   },
 
@@ -52,6 +54,23 @@ export const agendaPatterns = [
     ],
     extractEntities: (text: string): ExtractedEntities => ({
       date: extractDateFromText(text),
+      title: extractAfterKeyword(text, ['reuniao', 'encontro', 'compromisso']),
+    }),
+  },
+
+  // --- EDITAR EVENTO ---
+  {
+    intent: IntentType.EDITAR_EVENTO,
+    confidence: 0.85,
+    patterns: [
+      /\b(mud[ao]r?|alter[ao]r?|trocar?|adiar?|reagend[ao]r?)\b.*(reuniao|encontro|compromisso|consulta|evento)/,
+      /\b(reuniao|encontro|compromisso)\b.*(mud[ao]|alter|troc|adi|reagend)/,
+      /\b(mud[ao]r?|alter[ao]r?|adiar?)\b.*(amanha|segunda|terca|quarta|quinta|sexta)/,
+      /\b(reagend[ao]r?)\b/,
+    ],
+    extractEntities: (text: string): ExtractedEntities => ({
+      date: extractDateFromText(text),
+      time: extractTimeFromText(text),
       title: extractAfterKeyword(text, ['reuniao', 'encontro', 'compromisso']),
     }),
   },

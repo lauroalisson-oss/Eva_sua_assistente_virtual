@@ -195,6 +195,41 @@ class FinanceService {
     }
   }
 
+  /**
+   * Cancela/remove a última transação registrada pelo usuário.
+   */
+  async deleteLastTransaction(
+    phone: string,
+    entities: ExtractedEntities,
+    originalText: string
+  ): Promise<ResponseMessage> {
+    try {
+      // Buscar a última transação
+      const lastTransaction = await prisma.transaction.findFirst({
+        where: { tenantId: phone },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (!lastTransaction) {
+        return { text: '💰 Nenhuma transação encontrada para cancelar.' };
+      }
+
+      const typeLabel = lastTransaction.type === 'EXPENSE' ? 'Despesa' : 'Receita';
+      const amount = Number(lastTransaction.amount);
+
+      await prisma.transaction.delete({
+        where: { id: lastTransaction.id },
+      });
+
+      return {
+        text: `Transação removida! ❌\n\n${typeLabel === 'Despesa' ? '🛒' : '💵'} ~~${typeLabel}: ${formatCurrencyBR(amount)}~~\n📂 ${this.categoryLabel(lastTransaction.category)}\n📝 "${lastTransaction.description.substring(0, 60)}"`,
+      };
+    } catch (error) {
+      console.error('❌ Erro ao cancelar transação:', error);
+      return { text: '⚠️ Erro ao cancelar transação. Tente novamente.' };
+    }
+  }
+
   // --- Helpers ---
 
   private async checkBudgetAlert(phone: string): Promise<string | null> {

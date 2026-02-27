@@ -11,6 +11,59 @@ export function extractAfterKeyword(text: string, keywords: string[]): string | 
 }
 
 /**
+ * Extrai nome de pessoa de um texto em português.
+ * Detecta: "com o João", "com a Maria", "do Dr. Silva", "cliente Pedro", "pro João".
+ */
+export function extractPerson(text: string): string | undefined {
+  // "com o/a [Nome]", "com [Nome]"
+  const comMatch = text.match(
+    /\bcom\s+(?:o\s+|a\s+)?(?:[Dd]r\.?\s+|[Dd]outor[a]?\s+|[Pp]rof(?:essor[a]?)?\.?\s+)?([A-ZÀ-Ú][a-zà-ú]+(?:\s+[A-ZÀ-Ú][a-zà-ú]+)*)/
+  );
+  if (comMatch) return comMatch[1];
+
+  // "do/da [Nome]" (filtra palavras comuns que nao sao nomes)
+  const doMatch = text.match(
+    /\b(?:do|da)\s+(?:Dr\.?\s+|Doutor[a]?\s+)?([A-ZÀ-Ú][a-zà-ú]+(?:\s+[A-ZÀ-Ú][a-zà-ú]+)*)/
+  );
+  if (doMatch) {
+    const name = doMatch[1];
+    const notNames = /^(Mercado|Supermercado|Farmacia|Restaurante|Prefeitura|Banco|Hospital|Escola|Posto|Padaria|Cinema|Hotel|Loja|Trabalho|Mes|Dia|Semana|Manha|Tarde|Noite)$/i;
+    if (!notNames.test(name.normalize('NFD').replace(/[\u0300-\u036f]/g, ''))) {
+      return name;
+    }
+  }
+
+  // "cliente [Nome]"
+  const clienteMatch = text.match(/\bcliente\s+([A-ZÀ-Ú][a-zà-ú]+(?:\s+[A-ZÀ-Ú][a-zà-ú]+)*)/);
+  if (clienteMatch) return clienteMatch[1];
+
+  // "pro/pra [Nome]"
+  const proMatch = text.match(/\bp(?:ro|ra)\s+(?:o\s+|a\s+)?([A-ZÀ-Ú][a-zà-ú]+)/);
+  if (proMatch) return proMatch[1];
+
+  return undefined;
+}
+
+/**
+ * Extrai local/endereco de um texto em português.
+ * Detecta: "na prefeitura de Cipó", "no escritório", "em São Paulo".
+ */
+export function extractLocation(text: string): string | undefined {
+  // "na/no/em [Local]" — captura nome próprio ou sequência de palavras com preposições
+  const locMatch = text.match(
+    /\b(?:na|no|em)\s+((?:[A-ZÀ-Ú][a-zà-ú]+(?:\s+(?:de|do|da|dos|das)\s+[A-ZÀ-Ú]?[a-zà-ú]+)?(?:\s+[A-ZÀ-Ú][a-zà-ú]+)*))/
+  );
+  if (locMatch) {
+    let loc = locMatch[1].trim();
+    // Remover sufixos temporais capturados acidentalmente
+    loc = loc.replace(/\s+(?:[àa]s|amanha|hoje|segunda|terca|quarta|quinta|sexta|sabado|domingo)\b.*/i, '').trim();
+    if (loc.length >= 3) return loc;
+  }
+
+  return undefined;
+}
+
+/**
  * Detecta categoria financeira com base em palavras-chave no texto.
  */
 export function extractCategory(

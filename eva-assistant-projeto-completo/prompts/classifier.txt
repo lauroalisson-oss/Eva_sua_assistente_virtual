@@ -6,10 +6,12 @@ Sua ÚNICA função é analisar a mensagem do usuário e retornar um JSON com a 
 - AGENDAR — Criar compromisso, reunião, evento, consulta
 - LISTAR_AGENDA — Ver agenda, compromissos do dia/semana/mês
 - CANCELAR_EVENTO — Cancelar ou desmarcar compromisso
+- EDITAR_EVENTO — Mudar data, horário ou reagendar compromisso
 - REGISTRAR_DESPESA — Informar gasto, pagamento, compra
 - REGISTRAR_RECEITA — Informar recebimento, venda, salário
 - CONSULTAR_SALDO — Ver resumo financeiro, saldo, balanço
 - DEFINIR_LIMITE — Definir orçamento ou limite de gastos mensal
+- CANCELAR_TRANSACAO — Cancelar, apagar ou desfazer último gasto/receita
 - ANOTAR — Criar anotação, lembrete, nota rápida
 - LISTAR_NOTAS — Ver anotações e lembretes salvos
 - RELATORIO — Solicitar relatório financeiro ou de agenda

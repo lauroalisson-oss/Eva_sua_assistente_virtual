@@ -113,6 +113,74 @@ class AgendaService {
     }
   }
 
+  /**
+   * Edita um evento existente (data, horário ou título).
+   * Busca o evento mais próximo e aplica as alterações fornecidas.
+   */
+  async editEvent(
+    phone: string,
+    entities: ExtractedEntities,
+    originalText: string
+  ): Promise<ResponseMessage> {
+    try {
+      // Buscar eventos ativos futuros
+      const events = await prisma.event.findMany({
+        where: {
+          tenantId: phone,
+          status: 'ACTIVE',
+          deletedAt: null,
+          startAt: { gte: new Date() },
+        },
+        orderBy: { startAt: 'asc' },
+        take: 5,
+      });
+
+      if (events.length === 0) {
+        return { text: '📅 Nenhum compromisso futuro encontrado para editar.' };
+      }
+
+      // Selecionar o evento mais próximo (ou por título se fornecido)
+      let event = events[0];
+      if (entities.title) {
+        const titleNorm = (entities.title as string).toLowerCase();
+        const match = events.find(e => e.title.toLowerCase().includes(titleNorm));
+        if (match) event = match;
+      }
+
+      // Montar os dados atualizados
+      const updateData: Record<string, unknown> = {};
+      const changes: string[] = [];
+
+      if (entities.date || entities.time) {
+        const currentDate = event.startAt.toISOString().split('T')[0];
+        const currentTime = `${String(event.startAt.getHours()).padStart(2, '0')}:${String(event.startAt.getMinutes()).padStart(2, '0')}`;
+        const newDate = (entities.date as string) || currentDate;
+        const newTime = (entities.time as string) || currentTime;
+        updateData.startAt = new Date(`${newDate}T${newTime}:00`);
+        changes.push(`⏰ Nova data: ${formatDateBR(updateData.startAt as Date)}`);
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        return { text: '🤔 Não identifiquei o que alterar. Diga a nova data/horário.\nEx: "Muda a reunião para sexta às 15h"' };
+      }
+
+      // Resetar lembretes ao reagendar
+      updateData.reminderConfig = JSON.stringify([{ minutes: 60 }, { minutes: 1440 }]);
+
+      await prisma.event.update({
+        where: { id: event.id },
+        data: updateData,
+      });
+
+      return {
+        text: `Compromisso alterado! ✏️\n\n📅 *${event.title}*\n${changes.join('\n')}\n\nLembretes reconfigurados. 🔔`,
+      };
+    } catch (error) {
+      console.error('❌ Erro ao editar evento:', error);
+      return { text: '⚠️ Erro ao editar compromisso. Tente novamente.' };
+    }
+  }
+
   // --- Helpers ---
 
   private buildDateTime(date?: string, time?: string): Date {
