@@ -60,7 +60,8 @@ export interface ExtractedEntities {
  * Mensagem recebida (após pré-processamento)
  */
 export interface IncomingMessage {
-  phone: string;
+  phone: string;          // Número WhatsApp real (para enviar respostas)
+  tenantId: string;       // ID do tenant no banco (CUID)
   senderName: string;
   text: string | null;
   audio: AudioMessage | null;

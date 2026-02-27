@@ -41,7 +41,7 @@ class MessageRouter {
         `🧠 Classificação: ${classification.intent} (${classification.source}, ${(classification.confidence * 100).toFixed(0)}%)`
       );
 
-      // 3. Rotear para o módulo correto
+      // 3. Rotear para o módulo correto (usa tenantId para DB)
       const response = await this.routeToModule(
         classification.intent,
         classification.entities,
@@ -49,7 +49,7 @@ class MessageRouter {
         message
       );
 
-      // 4. Enviar resposta
+      // 4. Enviar resposta (usa phone para WhatsApp)
       if (response.text) {
         await whatsappClient.sendText(message.phone, response.text);
       }
@@ -77,6 +77,7 @@ class MessageRouter {
 
   /**
    * Roteia a intenção classificada para o módulo de negócio correto.
+   * Usa message.tenantId para operações de banco de dados.
    */
   private async routeToModule(
     intent: IntentType,
@@ -84,46 +85,48 @@ class MessageRouter {
     originalText: string,
     message: IncomingMessage
   ): Promise<ResponseMessage> {
+    const tid = message.tenantId;
+
     switch (intent) {
       // --- Agenda ---
       case IntentType.AGENDAR:
-        return agendaService.createEvent(message.phone, entities, originalText);
+        return agendaService.createEvent(tid, entities, originalText);
 
       case IntentType.LISTAR_AGENDA:
-        return agendaService.listEvents(message.phone, entities);
+        return agendaService.listEvents(tid, entities);
 
       case IntentType.CANCELAR_EVENTO:
-        return agendaService.cancelEvent(message.phone, entities, originalText);
+        return agendaService.cancelEvent(tid, entities, originalText);
 
       case IntentType.EDITAR_EVENTO:
-        return agendaService.editEvent(message.phone, entities, originalText);
+        return agendaService.editEvent(tid, entities, originalText);
 
       // --- Financeiro ---
       case IntentType.REGISTRAR_DESPESA:
-        return financeService.registerExpense(message.phone, entities, originalText);
+        return financeService.registerExpense(tid, entities, originalText);
 
       case IntentType.REGISTRAR_RECEITA:
-        return financeService.registerIncome(message.phone, entities, originalText);
+        return financeService.registerIncome(tid, entities, originalText);
 
       case IntentType.CONSULTAR_SALDO:
-        return financeService.getBalance(message.phone, entities);
+        return financeService.getBalance(tid, entities);
 
       case IntentType.DEFINIR_LIMITE:
-        return financeService.setBudget(message.phone, entities, originalText);
+        return financeService.setBudget(tid, entities, originalText);
 
       case IntentType.CANCELAR_TRANSACAO:
-        return financeService.deleteLastTransaction(message.phone, entities, originalText);
+        return financeService.deleteLastTransaction(tid, entities, originalText);
 
       // --- Anotações ---
       case IntentType.ANOTAR:
-        return notesService.createNote(message.phone, entities, originalText);
+        return notesService.createNote(tid, entities, originalText);
 
       case IntentType.LISTAR_NOTAS:
-        return notesService.listNotes(message.phone, entities);
+        return notesService.listNotes(tid, entities);
 
       // --- Sistema ---
       case IntentType.RELATORIO:
-        return pdfGenerator.generateMonthlyReport(message.phone);
+        return pdfGenerator.generateMonthlyReport(tid);
 
       case IntentType.SAUDACAO:
         return {
@@ -154,7 +157,7 @@ class MessageRouter {
     try {
       await prisma.messageLog.create({
         data: {
-          tenantId: message.phone, // No MVP, phone = tenantId
+          tenantId: message.tenantId,
           direction: 'incoming',
           messageType: message.audio ? 'audio' : 'text',
           classifiedIntent: classification.intent,
@@ -165,7 +168,6 @@ class MessageRouter {
       });
     } catch (error) {
       console.warn('⚠️ Falha ao registrar log:', error);
-      // Não falhar o fluxo principal por causa de log
     }
   }
 }

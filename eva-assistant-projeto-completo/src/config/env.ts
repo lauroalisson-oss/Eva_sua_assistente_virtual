@@ -24,6 +24,9 @@ const envSchema = z.object({
   EVOLUTION_API_KEY: z.string().min(1),
   EVOLUTION_INSTANCE: z.string().default('eva-bot'),
 
+  // Admin API
+  ADMIN_API_KEY: z.string().min(16).default('change-me-in-production-32chars'),
+
   // Configurações
   AUTHORIZED_PHONES: z.string().transform((val) => val.split(',').map((p) => p.trim())),
   DEFAULT_TIMEZONE: z.string().default('America/Bahia'),
