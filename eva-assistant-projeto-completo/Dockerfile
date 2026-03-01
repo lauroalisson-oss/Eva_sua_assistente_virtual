@@ -35,8 +35,11 @@ WORKDIR /app
 LABEL maintainer="Lauro Alisson"
 LABEL description="EVA — Executive Virtual Assistant | WhatsApp AI Secretary"
 
+# Instalar OpenSSL (necessário para Prisma em Alpine)
+RUN apk add --no-cache openssl
+
 # Criar usuário não-root
-RUN addgroup -g 1001 -S eva && \
+RUN addgroup -S eva && adduser -S eva -G eva && \
     adduser -S eva -u 1001
 
 # Copiar apenas o necessário
