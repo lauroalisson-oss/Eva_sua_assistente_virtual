@@ -32,15 +32,14 @@ FROM node:20-alpine AS production
 WORKDIR /app
 
 # Metadados
-LABEL maintainer="Lauro Alisson"
-LABEL description="EVA — Executive Virtual Assistant | WhatsApp AI Secretary"
+LABEL maintainer="Lauro Alisson <lauro.alisson@gmail.com>"
+LABEL description="EVA — Executive Virtual Assistant"
 
 # Instalar OpenSSL (necessário para Prisma em Alpine)
 RUN apk add --no-cache openssl
 
 # Criar usuário não-root
-RUN addgroup -S eva && adduser -S eva -G eva && \
-    adduser -S eva -u 1001
+RUN addgroup -S eva 2>/dev/null || true && adduser -S eva -G eva 2>/dev/null || true && \
 
 # Copiar apenas o necessário
 COPY package.json package-lock.json* ./
@@ -54,6 +53,9 @@ RUN npm ci --omit=dev --no-audit --no-fund && \
 
 # Copiar build do stage anterior
 COPY --from=builder /app/dist ./dist/
+
+# Ajustar permissões
+RUN chown -R eva:eva /app
 
 # Mudar para usuário não-root
 USER eva
