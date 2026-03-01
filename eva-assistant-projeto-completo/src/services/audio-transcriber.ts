@@ -40,7 +40,7 @@ class AudioTranscriber {
         model: 'whisper-large-v3',
         language: 'pt',
         response_format: 'text',
-      });
+      }) as unknown;
 
       const text = typeof transcription === 'string'
         ? transcription.trim()

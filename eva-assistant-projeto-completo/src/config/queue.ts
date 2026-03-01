@@ -52,7 +52,7 @@ export function createQueue(name: string): Queue {
  */
 export function createWorker(
   name: string,
-  processor: WorkerOptions['processor'] extends never ? never : Parameters<typeof Worker>[1],
+  processor: (job: any) => Promise<any>,
   opts?: Partial<WorkerOptions>,
 ): Worker {
   const worker = new Worker(name, processor, {
