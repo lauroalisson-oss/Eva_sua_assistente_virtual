@@ -39,7 +39,7 @@ LABEL description="EVA — Executive Virtual Assistant"
 RUN apk add --no-cache openssl
 
 # Criar usuário não-root
-RUN addgroup -S eva 2>/dev/null || true && adduser -S eva -G eva 2>/dev/null || true && \
+# Usar usuário 'node' que já vem no Alpine
 
 # Copiar apenas o necessário
 COPY package.json package-lock.json* ./
@@ -55,10 +55,10 @@ RUN npm ci --omit=dev --no-audit --no-fund && \
 COPY --from=builder /app/dist ./dist/
 
 # Ajustar permissões
-RUN chown -R eva:eva /app
+RUN chown -R node:node /app
 
 # Mudar para usuário não-root
-USER eva
+USER node
 
 # Expor porta
 EXPOSE 3000
