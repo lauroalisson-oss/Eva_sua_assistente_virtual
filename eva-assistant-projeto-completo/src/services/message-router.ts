@@ -6,6 +6,7 @@ import { agendaService } from '../modules/agenda/agenda.service';
 import { financeService } from '../modules/finance/finance.service';
 import { notesService } from '../modules/notes/notes.service';
 import { pdfGenerator } from '../modules/reports/pdf-generator';
+import { conversationService } from '../modules/conversation/conversation.service';
 import { IntentType } from '../types';
 import { prisma } from '../config/database';
 
@@ -35,11 +36,31 @@ class MessageRouter {
       }
 
       // 2. Classificar a mensagem (Motor Híbrido)
-      const classification = await hybridClassifier.classify(text);
+      let classification = await hybridClassifier.classify(text);
 
       console.log(
         `🧠 Classificação: ${classification.intent} (${classification.source}, ${(classification.confidence * 100).toFixed(0)}%)`
       );
+
+      // 2.1 Se a classificação é DESCONHECIDO ou SAUDACAO, verificar se o modo
+      //     atendente virtual está ativo → redirecionar para CONVERSA_LIVRE
+      if (
+        classification.intent === IntentType.DESCONHECIDO ||
+        classification.intent === IntentType.SAUDACAO
+      ) {
+        const conversationConfig = await prisma.conversationConfig?.findUnique({
+          where: { tenantId: message.tenantId },
+        }).catch(() => null);
+
+        if (conversationConfig?.isEnabled) {
+          console.log('💬 Modo atendente ativo — redirecionando para CONVERSA_LIVRE');
+          classification = {
+            ...classification,
+            intent: IntentType.CONVERSA_LIVRE,
+            source: classification.source,
+          };
+        }
+      }
 
       // 3. Rotear para o módulo correto (usa tenantId para DB)
       const response = await this.routeToModule(
@@ -124,6 +145,27 @@ class MessageRouter {
       case IntentType.LISTAR_NOTAS:
         return notesService.listNotes(tid, entities);
 
+      // --- Conversa Livre / Atendente Virtual ---
+      case IntentType.ATIVAR_ATENDENTE:
+        return conversationService.activateAttendant(tid, entities);
+
+      case IntentType.DESATIVAR_ATENDENTE:
+        return conversationService.deactivateAttendant(tid);
+
+      case IntentType.TREINAR_AGENTE:
+        return conversationService.trainAgent(tid, entities, originalText);
+
+      case IntentType.FALAR_COM_HUMANO:
+        return conversationService.transferToHuman(tid, message.phone);
+
+      case IntentType.CONVERSA_LIVRE:
+        return conversationService.handleConversation(
+          tid,
+          message.phone,
+          message.senderName,
+          originalText
+        );
+
       // --- Sistema ---
       case IntentType.RELATORIO:
         return pdfGenerator.generateMonthlyReport(tid);
@@ -135,7 +177,7 @@ class MessageRouter {
 
       case IntentType.AJUDA:
         return {
-          text: `🤖 *O que eu posso fazer:*\n\n📅 *Agenda:*\n• "Marca reunião amanhã às 14h"\n• "O que tenho pra hoje?"\n• "Muda a reunião para sexta às 15h"\n• "Cancela a reunião de amanhã"\n\n💰 *Financeiro:*\n• "Gastei 150 de combustível"\n• "Recebi 3.500 do cliente X"\n• "Como tá meu financeiro?"\n• "Limite de gastos: 8 mil"\n• "Cancela o último gasto"\n\n📝 *Anotações:*\n• "Anota: ligar pro contador segunda"\n• "Quais são minhas anotações?"\n\n📊 *Relatórios:*\n• "Relatório de fevereiro"\n\nVocê pode enviar por *texto* ou *áudio*! 🎤`,
+          text: `🤖 *O que eu posso fazer:*\n\n📅 *Agenda:*\n• "Marca reunião amanhã às 14h"\n• "O que tenho pra hoje?"\n• "Muda a reunião para sexta às 15h"\n• "Cancela a reunião de amanhã"\n\n💰 *Financeiro:*\n• "Gastei 150 de combustível"\n• "Recebi 3.500 do cliente X"\n• "Como tá meu financeiro?"\n• "Limite de gastos: 8 mil"\n• "Cancela o último gasto"\n\n📝 *Anotações:*\n• "Anota: ligar pro contador segunda"\n• "Quais são minhas anotações?"\n\n📊 *Relatórios:*\n• "Relatório de fevereiro"\n\n🤖 *Atendente Virtual:*\n• "Ativar atendente" — Liga o modo conversa livre\n• "Treinar: produto X custa R$ 50" — Ensina o agente\n• "Desativar atendente" — Desliga o modo conversa\n\nVocê pode enviar por *texto* ou *áudio*! 🎤`,
         };
 
       case IntentType.DESCONHECIDO:

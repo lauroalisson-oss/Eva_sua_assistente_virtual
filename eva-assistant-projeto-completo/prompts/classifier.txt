@@ -14,6 +14,11 @@ Sua ÚNICA função é analisar a mensagem do usuário e retornar um JSON com a 
 - CANCELAR_TRANSACAO — Cancelar, apagar ou desfazer último gasto/receita
 - ANOTAR — Criar anotação, lembrete, nota rápida
 - LISTAR_NOTAS — Ver anotações e lembretes salvos
+- ATIVAR_ATENDENTE — Ativar modo atendente virtual / conversa livre
+- DESATIVAR_ATENDENTE — Desativar modo atendente virtual
+- TREINAR_AGENTE — Adicionar conhecimento ao agente (começa com "treinar:", "ensinar:", "cadastrar:")
+- FALAR_COM_HUMANO — Cliente quer falar com pessoa real / atendente humano
+- CONVERSA_LIVRE — Mensagem que não é comando, é conversa natural (quando modo atendente está ativo)
 - RELATORIO — Solicitar relatório financeiro ou de agenda
 - AJUDA — Perguntar o que o bot faz ou como usar
 - SAUDACAO — Cumprimento (oi, bom dia, etc.)

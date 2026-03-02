@@ -3,6 +3,7 @@ import { agendaPatterns } from './patterns/agenda.patterns';
 import { financePatterns } from './patterns/finance.patterns';
 import { notesPatterns } from './patterns/notes.patterns';
 import { systemPatterns } from './patterns/system.patterns';
+import { conversationPatterns } from './patterns/conversation.patterns';
 
 interface PatternRule {
   intent: IntentType;
@@ -17,6 +18,7 @@ class RuleEngine {
   constructor() {
     // Carregar todas as regras (ordem importa: mais específico primeiro)
     this.rules = [
+      ...conversationPatterns,  // Conversa livre (prioridade alta para treinar/ativar)
       ...agendaPatterns,
       ...financePatterns,
       ...notesPatterns,
