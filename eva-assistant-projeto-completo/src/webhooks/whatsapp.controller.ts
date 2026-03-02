@@ -65,9 +65,11 @@ export async function whatsappWebhook(
     reply.status(200).send({ received: true });
 
     // Validar assinatura do webhook (producao)
+    // Evolution API v2.3.x nem sempre envia header de assinatura,
+    // entao aceitamos webhooks sem assinatura (comunicacao interna Railway)
     if (env.NODE_ENV === 'production') {
       const signature = (request.headers['x-webhook-signature'] || request.headers['x-evolution-signature']) as string | undefined;
-      if (!validateWebhookSignature(JSON.stringify(request.body), signature, env.EVOLUTION_API_KEY)) {
+      if (signature && !validateWebhookSignature(JSON.stringify(request.body), signature, env.EVOLUTION_API_KEY)) {
         request.log.warn('Webhook com assinatura inválida rejeitado');
         return;
       }
