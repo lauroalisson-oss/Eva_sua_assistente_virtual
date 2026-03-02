@@ -5,6 +5,7 @@ import { env } from './config/env';
 import { connectDatabase, disconnectDatabase } from './config/database';
 import { whatsappWebhook } from './webhooks/whatsapp.controller';
 import { adminRoutes } from './webhooks/admin.controller';
+import { orgAdminRoutes } from './webhooks/org-admin.controller';
 import { startReminderJob } from './modules/agenda/reminder.job';
 import { startDailySummaryJob } from './jobs/daily-summary.job';
 import { disconnectQueues } from './config/queue';
@@ -111,6 +112,9 @@ app.get('/webhook/whatsapp', async () => {
 
 // Admin API (protegida por API key)
 app.register(adminRoutes, { prefix: '/api/admin' });
+
+// API Multi-Empresa (protegida por API key)
+app.register(orgAdminRoutes, { prefix: '/api/org' });
 
 // ============ STARTUP ============
 

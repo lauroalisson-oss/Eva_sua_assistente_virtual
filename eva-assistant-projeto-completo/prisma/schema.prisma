@@ -8,7 +8,128 @@ datasource db {
 }
 
 // ============================================
-// TENANT (Multi-tenancy)
+// ORGANIZAÇÃO (Multi-Empresa)
+// ============================================
+model Organization {
+  id              String        @id @default(cuid())
+  name            String
+  slug            String        @unique   // URL-friendly identifier
+  email           String        @unique
+  phone           String?                 // Telefone da empresa
+  plan            OrgPlan       @default(STARTER)
+  planExpiresAt   DateTime?
+  isActive        Boolean       @default(true)
+  systemPrompt    String?       @db.Text  // Prompt personalizado global
+  welcomeMessage  String?                 // Mensagem de boas-vindas
+  businessHours   Json?                   // { "seg": "09:00-18:00", ... }
+  settings        Json          @default("{}")
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relações
+  instances       Instance[]
+  members         OrgMember[]
+  knowledgeDocs   KnowledgeDoc[]
+
+  @@map("organizations")
+}
+
+enum OrgPlan {
+  STARTER       // R$97/mês — 1 número, 1.000 msgs, 500 conv livre
+  BUSINESS      // R$297/mês — 3 números, 10.000 msgs, 5.000 conv livre
+  ENTERPRISE    // R$797/mês — Ilimitados
+
+  @@map("org_plan")
+}
+
+// ============================================
+// INSTÂNCIA WHATSAPP (cada número conectado)
+// ============================================
+model Instance {
+  id              String        @id @default(cuid())
+  orgId           String
+  instanceName    String        @unique   // Nome na Evolution API
+  phone           String        @unique   // Número WhatsApp conectado
+  displayName     String?                 // Nome de exibição
+  status          InstanceStatus @default(DISCONNECTED)
+  config          Json          @default("{}")
+  webhookUrl      String?                 // URL do webhook configurado
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relações
+  org             Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  tenants         Tenant[]      // Múltiplos tenants (clientes que falam com esta instância)
+
+  @@index([orgId])
+  @@map("instances")
+}
+
+enum InstanceStatus {
+  CONNECTED
+  DISCONNECTED
+  CONNECTING
+  BANNED
+
+  @@map("instance_status")
+}
+
+// ============================================
+// MEMBROS DA ORGANIZAÇÃO (usuários do painel)
+// ============================================
+model OrgMember {
+  id              String        @id @default(cuid())
+  orgId           String
+  name            String
+  email           String
+  passwordHash    String                  // bcrypt hash
+  role            MemberRole    @default(ADMIN)
+  isActive        Boolean       @default(true)
+  lastLoginAt     DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relações
+  org             Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, email])
+  @@index([email])
+  @@map("org_members")
+}
+
+enum MemberRole {
+  OWNER         // Dono — acesso total
+  ADMIN         // Administrador — quase tudo
+  OPERATOR      // Operador — atende conversas, vê relatórios
+  VIEWER        // Visualizador — só lê
+
+  @@map("member_role")
+}
+
+// ============================================
+// BASE DE CONHECIMENTO DA ORGANIZAÇÃO (RAG)
+// ============================================
+model KnowledgeDoc {
+  id              String        @id @default(cuid())
+  orgId           String
+  title           String
+  content         String        @db.Text
+  category        String        @default("geral")
+  tags            String[]
+  isActive        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relações
+  org             Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, category])
+  @@index([orgId, isActive])
+  @@map("knowledge_docs")
+}
+
+// ============================================
+// TENANT (Multi-tenancy — mantido para retrocompatibilidade)
 // ============================================
 model Tenant {
   id           String        @id @default(cuid())
@@ -19,16 +140,19 @@ model Tenant {
   planExpiresAt DateTime?
   isActive     Boolean       @default(true)
   timezone     String        @default("America/Bahia")
-  settings     Json          @default("{}")  // Configurações personalizadas
+  settings     Json          @default("{}")
+  instanceId   String?                 // Vinculação com instância da organização
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
   // Relações
+  instance     Instance?     @relation(fields: [instanceId], references: [id])
   events       Event[]
   transactions Transaction[]
   notes        Note[]
   budgets      Budget[]
 
+  @@index([instanceId])
   @@map("tenants")
 }
 
