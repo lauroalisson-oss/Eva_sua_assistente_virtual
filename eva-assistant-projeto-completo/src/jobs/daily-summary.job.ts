@@ -13,7 +13,7 @@ import { env } from '../config/env';
  * - Anotações urgentes pendentes
  */
 
-const QUEUE_NAME = 'eva:daily-summary';
+const QUEUE_NAME = 'eva-daily-summary';
 
 const dailySummaryQueue = createQueue(QUEUE_NAME);
 

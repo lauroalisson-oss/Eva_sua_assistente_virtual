@@ -15,7 +15,7 @@ interface ReminderConfig {
   sent?: boolean;
 }
 
-const QUEUE_NAME = 'eva:reminders';
+const QUEUE_NAME = 'eva-reminders';
 
 const reminderQueue = createQueue(QUEUE_NAME);
 
