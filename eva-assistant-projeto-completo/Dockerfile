@@ -54,6 +54,10 @@ RUN npm ci --omit=dev --no-audit --no-fund && \
 # Copiar build do stage anterior
 COPY --from=builder /app/dist ./dist/
 
+# Copiar entrypoint script
+COPY docker-entrypoint.sh ./
+RUN chmod +x docker-entrypoint.sh
+
 # Ajustar permissões
 RUN chown -R node:node /app
 
@@ -63,5 +67,5 @@ USER node
 # Expor porta
 EXPOSE 3000
 
-# Iniciar aplicação
-CMD ["node", "dist/index.js"]
+# Iniciar aplicação via entrypoint (shell handles migrations + server)
+CMD ["./docker-entrypoint.sh"]
