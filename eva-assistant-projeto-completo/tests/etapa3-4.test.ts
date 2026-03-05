@@ -92,6 +92,36 @@ describe('Parser de Datas — Datas Compostas', () => {
     const result = extractDateFromText('proxima quarta');
     expect(result).toBeDefined();
   });
+
+  it('deve extrair "daqui a 5 dias"', () => {
+    const result = extractDateFromText('daqui a 5 dias');
+    expect(result).toBeDefined();
+    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('deve extrair "em 2 semanas"', () => {
+    const result = extractDateFromText('em 2 semanas');
+    expect(result).toBeDefined();
+    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('deve extrair "próximo mês"', () => {
+    const result = extractDateFromText('próximo mês');
+    expect(result).toBeDefined();
+    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('deve extrair "mês que vem"', () => {
+    const result = extractDateFromText('mês que vem');
+    expect(result).toBeDefined();
+    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('deve extrair "final do mês"', () => {
+    const result = extractDateFromText('final do mês');
+    expect(result).toBeDefined();
+    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
 });
 
 // ============================================
@@ -177,6 +207,36 @@ describe('Classificador — Editar Evento', () => {
 
   it('deve classificar EDITAR_EVENTO com "alterar compromisso"', () => {
     const result = classifyByRules('Altera o compromisso de segunda', agendaPatterns as PatternRule[]);
+    expect(result.intent).toBe(IntentType.EDITAR_EVENTO);
+  });
+
+  it('deve classificar EDITAR_EVENTO com "corrige o horário"', () => {
+    const result = classifyByRules('Corrige o horário da reunião', agendaPatterns as PatternRule[]);
+    expect(result.intent).toBe(IntentType.EDITAR_EVENTO);
+  });
+
+  it('deve classificar EDITAR_EVENTO com "antecipa a consulta"', () => {
+    const result = classifyByRules('Antecipa a consulta', agendaPatterns as PatternRule[]);
+    expect(result.intent).toBe(IntentType.EDITAR_EVENTO);
+  });
+
+  it('deve classificar EDITAR_EVENTO com "posterga o evento"', () => {
+    const result = classifyByRules('Posterga o evento', agendaPatterns as PatternRule[]);
+    expect(result.intent).toBe(IntentType.EDITAR_EVENTO);
+  });
+
+  it('deve classificar EDITAR_EVENTO com "passa pra sexta"', () => {
+    const result = classifyByRules('Passa a reunião pra sexta', agendaPatterns as PatternRule[]);
+    expect(result.intent).toBe(IntentType.EDITAR_EVENTO);
+  });
+
+  it('deve classificar EDITAR_EVENTO com "na verdade a reunião"', () => {
+    const result = classifyByRules('Na verdade a reunião é às 15h', agendaPatterns as PatternRule[]);
+    expect(result.intent).toBe(IntentType.EDITAR_EVENTO);
+  });
+
+  it('deve classificar EDITAR_EVENTO com "remarca"', () => {
+    const result = classifyByRules('Remarca a consulta para quarta', agendaPatterns as PatternRule[]);
     expect(result.intent).toBe(IntentType.EDITAR_EVENTO);
   });
 });
@@ -486,6 +546,108 @@ describe('Security Plugins — Config', () => {
 // ============================================
 // TESTES: CI/CD PIPELINE CONFIG (ETAPA 6)
 // ============================================
+
+// ============================================
+// TESTES: NOTAS EXPANDIDAS
+// ============================================
+
+import { notesPatterns } from '../src/classifier/patterns/notes.patterns';
+
+describe('Classificador — Notas Expandidas', () => {
+  it('deve classificar ANOTAR com "guarda"', () => {
+    const result = classifyByRules('Guarda isso: senha do wifi é 12345', notesPatterns as PatternRule[]);
+    expect(result.intent).toBe(IntentType.ANOTAR);
+  });
+
+  it('deve classificar ANOTAR com "não me deixa esquecer"', () => {
+    const result = classifyByRules('Não me deixa esquecer de pagar o boleto', notesPatterns as PatternRule[]);
+    expect(result.intent).toBe(IntentType.ANOTAR);
+  });
+
+  it('deve classificar ANOTAR com "preciso lembrar"', () => {
+    const result = classifyByRules('Preciso lembrar de ligar pro dentista', notesPatterns as PatternRule[]);
+    expect(result.intent).toBe(IntentType.ANOTAR);
+  });
+
+  it('deve classificar ANOTAR com "cria uma nota"', () => {
+    const result = classifyByRules('Cria uma nota sobre o projeto novo', notesPatterns as PatternRule[]);
+    expect(result.intent).toBe(IntentType.ANOTAR);
+  });
+
+  it('deve classificar ANOTAR com "me lembra de"', () => {
+    const result = classifyByRules('Me lembra de comprar leite amanhã', notesPatterns as PatternRule[]);
+    expect(result.intent).toBe(IntentType.ANOTAR);
+  });
+
+  it('deve classificar LISTAR_NOTAS com "o que eu anotei"', () => {
+    const result = classifyByRules('O que eu anotei?', notesPatterns as PatternRule[]);
+    expect(result.intent).toBe(IntentType.LISTAR_NOTAS);
+  });
+
+  it('deve classificar LISTAR_NOTAS com "o que eu salvei"', () => {
+    const result = classifyByRules('O que eu salvei?', notesPatterns as PatternRule[]);
+    expect(result.intent).toBe(IntentType.LISTAR_NOTAS);
+  });
+
+  it('deve extrair conteúdo limpo removendo prefixo de comando', () => {
+    const result = classifyByRules('anota: reunião com cliente às 10h', notesPatterns as PatternRule[]);
+    expect(result.entities.description).toBeDefined();
+    expect(result.entities.description).not.toMatch(/^anot/i);
+  });
+});
+
+// ============================================
+// TESTES: CANCELAR TRANSAÇÃO EXPANDIDO
+// ============================================
+
+describe('Classificador — Cancelar Transação Expandido', () => {
+  it('deve classificar CANCELAR_TRANSACAO com "errei o valor"', () => {
+    const result = classifyByRules('Errei o valor do gasto', financePatterns as PatternRule[]);
+    expect(result.intent).toBe(IntentType.CANCELAR_TRANSACAO);
+  });
+
+  it('deve classificar CANCELAR_TRANSACAO com "estorna"', () => {
+    const result = classifyByRules('Estorna o último lançamento', financePatterns as PatternRule[]);
+    expect(result.intent).toBe(IntentType.CANCELAR_TRANSACAO);
+  });
+
+  it('deve classificar CANCELAR_TRANSACAO com "exclui a despesa"', () => {
+    const result = classifyByRules('Exclui a despesa', financePatterns as PatternRule[]);
+    expect(result.intent).toBe(IntentType.CANCELAR_TRANSACAO);
+  });
+});
+
+// ============================================
+// TESTES: HORÁRIOS FUZZY
+// ============================================
+
+import { extractTimeFromText as extractTime } from '../src/utils/date-parser';
+
+describe('Parser de Horários Fuzzy', () => {
+  it('deve extrair "de manhã" como 09:00', () => {
+    expect(extractTime('de manhã')).toBe('09:00');
+  });
+
+  it('deve extrair "à tarde" como 14:00', () => {
+    expect(extractTime('à tarde')).toBe('14:00');
+  });
+
+  it('deve extrair "à noite" como 19:00', () => {
+    expect(extractTime('à noite')).toBe('19:00');
+  });
+
+  it('deve extrair "cedo" como 08:00', () => {
+    expect(extractTime('cedo')).toBe('08:00');
+  });
+
+  it('deve extrair "final da tarde" como 17:00', () => {
+    expect(extractTime('final da tarde')).toBe('17:00');
+  });
+
+  it('deve extrair "começo da manhã" como 08:00', () => {
+    expect(extractTime('começo da manhã')).toBe('08:00');
+  });
+});
 
 describe('CI/CD — Node Version Matrix', () => {
   const supportedVersions = [20, 22];

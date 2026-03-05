@@ -82,27 +82,63 @@ class NotesService {
   // --- Helpers ---
 
   /**
-   * Remove prefixos de comando do texto da nota.
+   * Remove prefixos de comando e palavras de preenchimento do texto da nota.
+   * Extrai apenas o conteúdo significativo que o usuário quer salvar.
    */
   private cleanNoteText(text: string): string {
-    return text
-      .replace(/^(anot[ae]r?|lembr[ae]r?|salv[ae]r?|nota|lembrete)\s*[:\-]?\s*/i, '')
-      .trim();
+    let content = text;
+
+    // Remove command verbs (anotar, lembrar, salvar, guardar, etc.)
+    content = content.replace(
+      /^(?:eva\s*[,:]?\s*)?(?:anot[ae]r?|lembr[ae]r?|salv[ae]r?|guard[ae]r?|registr[ae]r?|grav[ae]r?|escrev[ae]r?)\s*/i,
+      ''
+    );
+
+    // Remove noun-based prefixes (nota:, lembrete:, etc.)
+    content = content.replace(
+      /^(?:cri[ae]r?\s+)?(?:uma?\s+)?(?:nota|lembrete|anotacao|recado|observacao|memo|aviso)\s*/i,
+      ''
+    );
+
+    // Remove informal prefixes
+    content = content.replace(
+      /^(?:nao (?:me )?deixa esquecer|pra (?:eu )?nao esquecer|antes que eu esqueca|preciso lembrar|nao posso esquecer|tenho que lembrar)\s*/i,
+      ''
+    );
+
+    // Remove filler words after prefix
+    content = content.replace(/^(?:que|de que|isso|o seguinte|aqui|ai)\s*[:\-]?\s*/i, '');
+
+    // Remove separator chars at the beginning
+    content = content.replace(/^[:\-–—]\s*/, '');
+
+    // Remove "por favor" / "pfv"
+    content = content.replace(/\s*(?:por favor|pfv|pf)\s*/gi, ' ');
+
+    // Remove filler connectors at start: "que", "de", "de que", "o", "a"
+    content = content.replace(/^(?:que|de\s+que|de|do|da|o|a|um|uma)\s+/i, '');
+
+    return content.trim() || text;
   }
 
   /**
    * Gera tags automáticas baseadas no conteúdo.
+   * Expanded tag detection for better organization.
    */
   private autoTag(content: string): string[] {
     const normalized = content.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const tags: string[] = [];
 
-    if (/\b(urgente|urgencia|emergencia|imediato)\b/.test(normalized)) tags.push('urgente');
-    if (/\b(ligar|retornar|responder|entrar em contato)\b/.test(normalized)) tags.push('follow-up');
-    if (/\b(ideia|sugest[aã]o|pensar|considerar|talvez)\b/.test(normalized)) tags.push('ideia');
-    if (/\b(comprar|pagar|depositar|transferir)\b/.test(normalized)) tags.push('financeiro');
-    if (/\b(reuniao|encontro|visita|consulta)\b/.test(normalized)) tags.push('agenda');
-    if (/\b(projeto|sistema|app|site|codigo)\b/.test(normalized)) tags.push('projeto');
+    if (/\b(urgente|urgencia|emergencia|imediato|prioridade|critico|importante)\b/.test(normalized)) tags.push('urgente');
+    if (/\b(ligar|retornar|responder|entrar em contato|dar retorno|callback|follow[- ]?up|acompanhar)\b/.test(normalized)) tags.push('follow-up');
+    if (/\b(ideia|sugestao|pensar|considerar|talvez|possibilidade|hipotese|brainstorm)\b/.test(normalized)) tags.push('ideia');
+    if (/\b(comprar|pagar|depositar|transferir|cobrar|divida|orcamento|preco|valor|conta|boleto|fatura|pix)\b/.test(normalized)) tags.push('financeiro');
+    if (/\b(reuniao|encontro|visita|consulta|evento|agendar|marcar|horario|compromisso)\b/.test(normalized)) tags.push('agenda');
+    if (/\b(projeto|sistema|app|site|codigo|deploy|bug|feature|sprint|tarefa|task|desenvolvimento)\b/.test(normalized)) tags.push('projeto');
+    if (/\b(comprar|lista de compras|mercado|supermercado|farmacia|loja|produto)\b/.test(normalized)) tags.push('compras');
+    if (/\b(senha|login|acesso|codigo|chave|token|credencial|pin)\b/.test(normalized)) tags.push('credenciais');
+    if (/\b(endereco|rua|avenida|cep|numero|bairro|cidade|local)\b/.test(normalized)) tags.push('endereco');
+    if (/\b(telefone|celular|whatsapp|email|contato)\b/.test(normalized)) tags.push('contato');
 
     return tags;
   }

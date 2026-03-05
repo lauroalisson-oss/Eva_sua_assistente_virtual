@@ -88,6 +88,21 @@ describe('Classificador — Agenda', () => {
     expect(result.intent).toBe(IntentType.AGENDAR);
   });
 
+  it('deve classificar AGENDAR com "preciso agendar"', () => {
+    const result = classifyByRules('Preciso agendar uma entrevista');
+    expect(result.intent).toBe(IntentType.AGENDAR);
+  });
+
+  it('deve classificar AGENDAR com "bota na agenda"', () => {
+    const result = classifyByRules('Bota na agenda reunião com cliente');
+    expect(result.intent).toBe(IntentType.AGENDAR);
+  });
+
+  it('deve classificar AGENDAR com visita', () => {
+    const result = classifyByRules('Marca visita na prefeitura amanhã');
+    expect(result.intent).toBe(IntentType.AGENDAR);
+  });
+
   it('deve classificar LISTAR_AGENDA para hoje', () => {
     const result = classifyByRules('O que tenho pra hoje?');
     expect(result.intent).toBe(IntentType.LISTAR_AGENDA);
@@ -111,6 +126,21 @@ describe('Classificador — Agenda', () => {
     expect(result.intent).toBe(IntentType.LISTAR_AGENDA);
   });
 
+  it('deve classificar LISTAR_AGENDA com "mostra minha agenda"', () => {
+    const result = classifyByRules('Mostra minha agenda');
+    expect(result.intent).toBe(IntentType.LISTAR_AGENDA);
+  });
+
+  it('deve classificar LISTAR_AGENDA com "o que tá marcado"', () => {
+    const result = classifyByRules('O que tá marcado pra amanhã?');
+    expect(result.intent).toBe(IntentType.LISTAR_AGENDA);
+  });
+
+  it('deve classificar LISTAR_AGENDA com "como está meu dia"', () => {
+    const result = classifyByRules('Como está meu dia?');
+    expect(result.intent).toBe(IntentType.LISTAR_AGENDA);
+  });
+
   it('deve classificar CANCELAR_EVENTO', () => {
     const result = classifyByRules('Cancela a reunião de amanhã');
     expect(result.intent).toBe(IntentType.CANCELAR_EVENTO);
@@ -118,6 +148,11 @@ describe('Classificador — Agenda', () => {
 
   it('deve classificar CANCELAR_EVENTO com "desmarcar"', () => {
     const result = classifyByRules('Desmarca o compromisso de segunda');
+    expect(result.intent).toBe(IntentType.CANCELAR_EVENTO);
+  });
+
+  it('deve classificar CANCELAR_EVENTO com "tira da agenda"', () => {
+    const result = classifyByRules('Tira da agenda a reunião de amanhã');
     expect(result.intent).toBe(IntentType.CANCELAR_EVENTO);
   });
 });
@@ -163,6 +198,18 @@ describe('Classificador — Financeiro', () => {
     expect(result.entities.category).toBe('transporte');
   });
 
+  it('deve classificar REGISTRAR_DESPESA com "torrei"', () => {
+    const result = classifyByRules('Torrei 500 no shopping');
+    expect(result.intent).toBe(IntentType.REGISTRAR_DESPESA);
+    expect(result.entities.amount).toBe(500);
+  });
+
+  it('deve classificar REGISTRAR_DESPESA com "conta de X"', () => {
+    const result = classifyByRules('Conta de luz de 250 reais');
+    expect(result.intent).toBe(IntentType.REGISTRAR_DESPESA);
+    expect(result.entities.amount).toBe(250);
+  });
+
   it('deve classificar REGISTRAR_RECEITA com "recebi"', () => {
     const result = classifyByRules('Recebi 5000 do cliente');
     expect(result.intent).toBe(IntentType.REGISTRAR_RECEITA);
@@ -179,6 +226,18 @@ describe('Classificador — Financeiro', () => {
     const result = classifyByRules('Vendi o produto por 2k');
     expect(result.intent).toBe(IntentType.REGISTRAR_RECEITA);
     expect(result.entities.amount).toBe(2000);
+  });
+
+  it('deve classificar REGISTRAR_RECEITA com "ganhei"', () => {
+    const result = classifyByRules('Ganhei 1000 de comissão');
+    expect(result.intent).toBe(IntentType.REGISTRAR_RECEITA);
+    expect(result.entities.amount).toBe(1000);
+  });
+
+  it('deve classificar REGISTRAR_RECEITA com "caiu na conta"', () => {
+    const result = classifyByRules('Caiu 3000 na conta');
+    expect(result.intent).toBe(IntentType.REGISTRAR_RECEITA);
+    expect(result.entities.amount).toBe(3000);
   });
 
   it('deve classificar CONSULTAR_SALDO com "como ta meu financeiro"', () => {
@@ -201,6 +260,16 @@ describe('Classificador — Financeiro', () => {
     expect(result.intent).toBe(IntentType.CONSULTAR_SALDO);
   });
 
+  it('deve classificar CONSULTAR_SALDO com "minhas finanças"', () => {
+    const result = classifyByRules('Minhas finanças');
+    expect(result.intent).toBe(IntentType.CONSULTAR_SALDO);
+  });
+
+  it('deve classificar CONSULTAR_SALDO com "quanto sobrou"', () => {
+    const result = classifyByRules('Quanto sobrou esse mês?');
+    expect(result.intent).toBe(IntentType.CONSULTAR_SALDO);
+  });
+
   it('deve classificar DEFINIR_LIMITE', () => {
     const result = classifyByRules('Meu limite de gastos é 8000');
     expect(result.intent).toBe(IntentType.DEFINIR_LIMITE);
@@ -211,6 +280,11 @@ describe('Classificador — Financeiro', () => {
     const result = classifyByRules('Define orçamento mensal de 5 mil');
     expect(result.intent).toBe(IntentType.DEFINIR_LIMITE);
     expect(result.entities.amount).toBe(5000);
+  });
+
+  it('deve classificar CANCELAR_TRANSACAO com "errei o valor"', () => {
+    const result = classifyByRules('Errei o valor do gasto');
+    expect(result.intent).toBe(IntentType.CANCELAR_TRANSACAO);
   });
 });
 
@@ -234,6 +308,44 @@ describe('Classificador — Anotações', () => {
     expect(result.intent).toBe(IntentType.ANOTAR);
   });
 
+  it('deve classificar ANOTAR com "guarda"', () => {
+    const result = classifyByRules('Guarda essa informação: reunião às 15h');
+    expect(result.intent).toBe(IntentType.ANOTAR);
+  });
+
+  it('deve classificar ANOTAR com "não me deixa esquecer"', () => {
+    const result = classifyByRules('Não me deixa esquecer de ligar pro dentista');
+    expect(result.intent).toBe(IntentType.ANOTAR);
+  });
+
+  it('deve classificar ANOTAR com "preciso lembrar"', () => {
+    const result = classifyByRules('Preciso lembrar de comprar leite');
+    expect(result.intent).toBe(IntentType.ANOTAR);
+  });
+
+  it('deve classificar ANOTAR com "cria uma nota"', () => {
+    const result = classifyByRules('Cria uma nota sobre o projeto');
+    expect(result.intent).toBe(IntentType.ANOTAR);
+  });
+
+  it('deve classificar ANOTAR com "me lembra de"', () => {
+    const result = classifyByRules('Me lembra de pagar a conta amanhã');
+    expect(result.intent).toBe(IntentType.ANOTAR);
+  });
+
+  it('deve extrair conteúdo limpo de nota com "anota"', () => {
+    const result = classifyByRules('anota: ligar pro João segunda');
+    expect(result.entities.description).toBeDefined();
+    // Should extract the content without the "anota:" prefix
+    expect(result.entities.description).not.toMatch(/^anot/i);
+  });
+
+  it('deve extrair conteúdo limpo de nota com "não me deixa esquecer"', () => {
+    const result = classifyByRules('não me deixa esquecer de pagar o boleto');
+    expect(result.entities.description).toBeDefined();
+    expect(result.entities.description).not.toMatch(/nao me deixa esquecer/i);
+  });
+
   it('deve classificar LISTAR_NOTAS com "minhas notas"', () => {
     const result = classifyByRules('Quais são minhas notas?');
     expect(result.intent).toBe(IntentType.LISTAR_NOTAS);
@@ -241,6 +353,16 @@ describe('Classificador — Anotações', () => {
 
   it('deve classificar LISTAR_NOTAS com "meus lembretes"', () => {
     const result = classifyByRules('Mostra meus lembretes');
+    expect(result.intent).toBe(IntentType.LISTAR_NOTAS);
+  });
+
+  it('deve classificar LISTAR_NOTAS com "o que eu anotei"', () => {
+    const result = classifyByRules('O que eu anotei?');
+    expect(result.intent).toBe(IntentType.LISTAR_NOTAS);
+  });
+
+  it('deve classificar LISTAR_NOTAS com "o que eu salvei"', () => {
+    const result = classifyByRules('O que eu salvei?');
     expect(result.intent).toBe(IntentType.LISTAR_NOTAS);
   });
 });
@@ -270,6 +392,16 @@ describe('Classificador — Sistema', () => {
     expect(result.intent).toBe(IntentType.SAUDACAO);
   });
 
+  it('deve classificar SAUDACAO com "beleza"', () => {
+    const result = classifyByRules('Beleza');
+    expect(result.intent).toBe(IntentType.SAUDACAO);
+  });
+
+  it('deve classificar SAUDACAO com "tudo bem"', () => {
+    const result = classifyByRules('Tudo bem?');
+    expect(result.intent).toBe(IntentType.SAUDACAO);
+  });
+
   it('deve classificar AJUDA com "ajuda"', () => {
     const result = classifyByRules('Ajuda');
     expect(result.intent).toBe(IntentType.AJUDA);
@@ -285,6 +417,16 @@ describe('Classificador — Sistema', () => {
     expect(result.intent).toBe(IntentType.AJUDA);
   });
 
+  it('deve classificar AJUDA com "me ajuda"', () => {
+    const result = classifyByRules('Me ajuda aqui');
+    expect(result.intent).toBe(IntentType.AJUDA);
+  });
+
+  it('deve classificar AJUDA com "o que eu posso fazer"', () => {
+    const result = classifyByRules('O que eu posso fazer aqui?');
+    expect(result.intent).toBe(IntentType.AJUDA);
+  });
+
   it('deve classificar RELATORIO', () => {
     const result = classifyByRules('Relatório de fevereiro');
     expect(result.intent).toBe(IntentType.RELATORIO);
@@ -294,6 +436,16 @@ describe('Classificador — Sistema', () => {
     const result = classifyByRules('Resumo da semana');
     expect(result.intent).toBe(IntentType.RELATORIO);
     expect(result.entities.period).toBe('week');
+  });
+
+  it('deve classificar RELATORIO com "como foi meu mês"', () => {
+    const result = classifyByRules('Como foi meu mês?');
+    expect(result.intent).toBe(IntentType.RELATORIO);
+  });
+
+  it('deve classificar RELATORIO com "gera um relatório"', () => {
+    const result = classifyByRules('Gera um relatório mensal');
+    expect(result.intent).toBe(IntentType.RELATORIO);
   });
 
   it('deve retornar DESCONHECIDO para frase aleatoria', () => {
@@ -345,6 +497,11 @@ describe('Extração de Entidades', () => {
   it('deve detectar categoria educacao', () => {
     const result = classifyByRules('Paguei 300 na mensalidade do curso');
     expect(result.entities.category).toBe('educacao');
+  });
+
+  it('deve detectar categoria vestuario', () => {
+    const result = classifyByRules('Comprei roupa por 200 reais');
+    expect(result.entities.category).toBe('vestuario');
   });
 
   it('deve extrair periodo "today" para agenda', () => {
@@ -403,6 +560,42 @@ describe('Parser de Datas PT-BR', () => {
     expect(result).toContain('-04-20');
   });
 
+  it('deve extrair "daqui a 3 dias"', () => {
+    const result = extractDateFromText('daqui a 3 dias');
+    expect(result).toBeDefined();
+    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('deve extrair "em 2 semanas"', () => {
+    const result = extractDateFromText('em 2 semanas');
+    expect(result).toBeDefined();
+    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('deve extrair "próximo mês"', () => {
+    const result = extractDateFromText('próximo mês');
+    expect(result).toBeDefined();
+    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('deve extrair "mês que vem"', () => {
+    const result = extractDateFromText('mês que vem');
+    expect(result).toBeDefined();
+    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('deve extrair "semana que vem"', () => {
+    const result = extractDateFromText('semana que vem');
+    expect(result).toBeDefined();
+    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('deve extrair "final do mês"', () => {
+    const result = extractDateFromText('final do mês');
+    expect(result).toBeDefined();
+    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
   it('deve retornar undefined para texto sem data', () => {
     const result = extractDateFromText('ola tudo bem');
     expect(result).toBeUndefined();
@@ -428,6 +621,26 @@ describe('Parser de Horarios PT-BR', () => {
 
   it('deve extrair "meia noite"', () => {
     expect(extractTimeFromText('meia noite')).toBe('00:00');
+  });
+
+  it('deve extrair "de manhã"', () => {
+    expect(extractTimeFromText('de manhã')).toBe('09:00');
+  });
+
+  it('deve extrair "à tarde"', () => {
+    expect(extractTimeFromText('à tarde')).toBe('14:00');
+  });
+
+  it('deve extrair "à noite"', () => {
+    expect(extractTimeFromText('à noite')).toBe('19:00');
+  });
+
+  it('deve extrair "cedo"', () => {
+    expect(extractTimeFromText('cedo')).toBe('08:00');
+  });
+
+  it('deve extrair "final da tarde"', () => {
+    expect(extractTimeFromText('final da tarde')).toBe('17:00');
   });
 
   it('deve retornar undefined para texto sem horario', () => {
