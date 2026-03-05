@@ -80,15 +80,39 @@ class WhatsAppClient {
 
   /**
    * Baixa uma mídia (áudio) do WhatsApp via URL temporária.
+   * Tenta primeiro sem autenticação, depois com apikey da Evolution API.
    */
   async downloadMedia(mediaUrl: string): Promise<Buffer | null> {
     try {
-      const response = await fetch(mediaUrl);
-      if (!response.ok) return null;
+      // First attempt: direct download (some URLs are pre-authenticated)
+      let response = await fetch(mediaUrl, { signal: AbortSignal.timeout(30000) });
+
+      // If direct download fails, try with Evolution API auth headers
+      if (!response.ok) {
+        response = await fetch(mediaUrl, {
+          headers: { apikey: this.apiKey },
+          signal: AbortSignal.timeout(30000),
+        });
+      }
+
+      if (!response.ok) {
+        console.error(`❌ Download falhou: HTTP ${response.status}`);
+        return null;
+      }
+
       const arrayBuffer = await response.arrayBuffer();
-      return Buffer.from(arrayBuffer);
+      const buffer = Buffer.from(arrayBuffer);
+
+      if (buffer.length === 0) {
+        console.error('❌ Download retornou buffer vazio');
+        return null;
+      }
+
+      console.log(`📥 Mídia baixada: ${(buffer.length / 1024).toFixed(1)}KB`);
+      return buffer;
     } catch (error) {
-      console.error('❌ Erro ao baixar mídia:', error);
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error(`❌ Erro ao baixar mídia: ${msg}`);
       return null;
     }
   }

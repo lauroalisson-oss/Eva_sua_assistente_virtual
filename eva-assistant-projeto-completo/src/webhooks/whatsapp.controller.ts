@@ -180,13 +180,27 @@ export async function whatsappWebhook(
         return;
       }
 
-      // Verificar áudio legado
-      if (isAudio && !canUseAudio(tenant.plan)) {
-        await whatsappClient.sendText(
-          phone,
-          '🎤 Transcrição de áudio está disponível nos planos *PROFESSIONAL* e *ENTERPRISE*.\n\nPor enquanto, envie por texto! 📝'
-        );
-        return;
+      // Verificar áudio — todos os planos suportam com limite de duração por plano
+      if (isAudio) {
+        if (!canUseAudio(tenant.plan)) {
+          await whatsappClient.sendText(
+            phone,
+            '🎤 Transcrição de áudio não está disponível no seu plano.\n\nPor enquanto, envie por texto! 📝'
+          );
+          return;
+        }
+        const audioSeconds = data.message?.audioMessage?.seconds || 0;
+        const planLimits = getPlanLimits(tenant.plan);
+        const maxSeconds = 'audioMaxSeconds' in planLimits
+          ? (planLimits as unknown as { audioMaxSeconds: number }).audioMaxSeconds
+          : 300;
+        if (audioSeconds > maxSeconds) {
+          await whatsappClient.sendText(
+            phone,
+            `🎤 O áudio é muito longo (${audioSeconds}s). Seu plano *${tenant.plan}* permite até *${maxSeconds}s*.\n\nEnvie um áudio mais curto ou digite! 📝`
+          );
+          return;
+        }
       }
 
       request.log.info(

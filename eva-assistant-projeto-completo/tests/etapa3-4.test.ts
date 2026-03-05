@@ -281,7 +281,8 @@ describe('Limites de Plano', () => {
       transactionsPerMonth: 100,
       notesMax: 30,
       reportsEnabled: false,
-      audioEnabled: false,
+      audioEnabled: true,
+      audioMaxSeconds: 60,
     },
     PROFESSIONAL: {
       messagesPerDay: 500,
@@ -290,6 +291,7 @@ describe('Limites de Plano', () => {
       notesMax: 200,
       reportsEnabled: true,
       audioEnabled: true,
+      audioMaxSeconds: 300,
     },
     ENTERPRISE: {
       messagesPerDay: Infinity,
@@ -298,6 +300,7 @@ describe('Limites de Plano', () => {
       notesMax: Infinity,
       reportsEnabled: true,
       audioEnabled: true,
+      audioMaxSeconds: 600,
     },
   } as const;
 
@@ -315,8 +318,9 @@ describe('Limites de Plano', () => {
     expect(PLAN_LIMITS.BASIC.reportsEnabled).toBe(false);
   });
 
-  it('BASIC não deve ter áudio', () => {
-    expect(PLAN_LIMITS.BASIC.audioEnabled).toBe(false);
+  it('BASIC deve ter áudio habilitado (com limite de duração)', () => {
+    expect(PLAN_LIMITS.BASIC.audioEnabled).toBe(true);
+    expect(PLAN_LIMITS.BASIC.audioMaxSeconds).toBe(60);
   });
 
   it('PROFESSIONAL deve ter 500 mensagens/dia', () => {
@@ -646,6 +650,99 @@ describe('Parser de Horários Fuzzy', () => {
 
   it('deve extrair "começo da manhã" como 08:00', () => {
     expect(extractTime('começo da manhã')).toBe('08:00');
+  });
+});
+
+// ============================================
+// TESTES: ÁUDIO — LIMITES POR PLANO
+// ============================================
+
+describe('Áudio — Limites por Plano', () => {
+  const AUDIO_PLAN_LIMITS = {
+    BASIC: { audioEnabled: true, audioMaxSeconds: 60 },
+    PROFESSIONAL: { audioEnabled: true, audioMaxSeconds: 300 },
+    ENTERPRISE: { audioEnabled: true, audioMaxSeconds: 600 },
+  } as const;
+
+  it('BASIC deve permitir áudio de até 60s', () => {
+    expect(AUDIO_PLAN_LIMITS.BASIC.audioEnabled).toBe(true);
+    expect(AUDIO_PLAN_LIMITS.BASIC.audioMaxSeconds).toBe(60);
+  });
+
+  it('PROFESSIONAL deve permitir áudio de até 300s', () => {
+    expect(AUDIO_PLAN_LIMITS.PROFESSIONAL.audioEnabled).toBe(true);
+    expect(AUDIO_PLAN_LIMITS.PROFESSIONAL.audioMaxSeconds).toBe(300);
+  });
+
+  it('ENTERPRISE deve permitir áudio de até 600s', () => {
+    expect(AUDIO_PLAN_LIMITS.ENTERPRISE.audioEnabled).toBe(true);
+    expect(AUDIO_PLAN_LIMITS.ENTERPRISE.audioMaxSeconds).toBe(600);
+  });
+});
+
+// ============================================
+// TESTES: NORMALIZAÇÃO PÓS-TRANSCRIÇÃO
+// ============================================
+
+describe('Normalização Pós-Transcrição PT-BR', () => {
+  // Simulates the normalization logic from audio-transcriber
+  function normalize(text: string): string {
+    let result = text.trim();
+    const corrections: Array<[RegExp, string]> = [
+      [/legendas?\s+(?:pela|por)\s+(?:comunidade\s+)?amara\.?org/gi, ''],
+      [/obrigad[oa]\s+por\s+assistir/gi, ''],
+      [/\[música\]/gi, ''],
+      [/\b(é|eh|uh|ah|hm|hmm|uhm|ahn)\b\s*/gi, ''],
+      [/\bcem reais\b/gi, '100 reais'],
+      [/\bduzentos reais\b/gi, '200 reais'],
+      [/\bmil reais\b/gi, '1000 reais'],
+      [/\s{2,}/g, ' '],
+    ];
+    for (const [pattern, replacement] of corrections) {
+      result = result.replace(pattern, replacement);
+    }
+    result = result.replace(/^[.,;:!?\s]+/, '').replace(/[.,;:\s]+$/, '');
+    if (result.length > 0) {
+      result = result.charAt(0).toUpperCase() + result.slice(1);
+    }
+    return result.trim();
+  }
+
+  it('deve remover artefatos do Whisper', () => {
+    const input = 'Legendas pela comunidade Amara.org marca reunião amanhã';
+    const result = normalize(input);
+    expect(result).not.toContain('Amara');
+    expect(result.toLowerCase()).toContain('marca');
+  });
+
+  it('deve remover fillers (é, eh, uh, ah)', () => {
+    const input = 'eh marca uh reunião ah amanhã';
+    const result = normalize(input);
+    expect(result).not.toContain('eh');
+    expect(result).not.toContain('uh');
+    expect(result).not.toContain('ah');
+  });
+
+  it('deve converter "cem reais" para "100 reais"', () => {
+    const input = 'gastei cem reais no mercado';
+    expect(normalize(input)).toContain('100 reais');
+  });
+
+  it('deve converter "mil reais" para "1000 reais"', () => {
+    const input = 'recebi mil reais do cliente';
+    expect(normalize(input)).toContain('1000 reais');
+  });
+
+  it('deve limpar espaços extras', () => {
+    const input = 'marca   reunião   amanhã';
+    const result = normalize(input);
+    expect(result).not.toContain('  ');
+  });
+
+  it('deve capitalizar primeira letra', () => {
+    const input = 'gastei 50 reais';
+    const result = normalize(input);
+    expect(result.charAt(0)).toBe('G');
   });
 });
 
