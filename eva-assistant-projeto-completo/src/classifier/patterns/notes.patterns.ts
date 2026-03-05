@@ -1,4 +1,5 @@
 import { IntentType, ExtractedEntities } from '../../types';
+import { extractDateFromText, extractTimeFromText } from '../../utils/date-parser';
 
 // Keywords that signal a note/reminder intent
 const NOTE_VERBS = 'anot[ae]r?|lembr[ae]r?|salv[ae]r?|guard[ae]r?|registr[ae]r?|grav[ae]r?|escrev[ae]r?|marc[ae]r?';
@@ -39,6 +40,17 @@ function extractNoteContent(text: string): string {
   return content.trim() || text;
 }
 
+/**
+ * Checks if the text contains date/time references for reminder scheduling
+ */
+function extractReminderInfo(text: string): { date?: string; time?: string; hasDateReference: boolean } {
+  const date = extractDateFromText(text);
+  const time = extractTimeFromText(text);
+  const hasDateReference = !!(date || time ||
+    /\b(amanha|hoje|segunda|terca|quarta|quinta|sexta|sabado|domingo|semana que vem|proximo|proxima|daqui a|depois de amanha|no dia|dia \d|ate o dia|ate dia)\b/i.test(text));
+  return { date: date || undefined, time: time || undefined, hasDateReference };
+}
+
 export const notesPatterns = [
   // --- ANOTAR ---
   {
@@ -61,10 +73,20 @@ export const notesPatterns = [
       /\b(bot[ae]|coloc[ae]|p[oõ]e)\b.*\b(nota|lembrete|anotacao)\b/,
       // "me lembra de/que" (common phrasing)
       /\bme\s+lembr[ae]\b.*\b(de|que)\b/,
+      // "não deixa eu esquecer de...", "preciso me lembrar de..."
+      /\b(nao\s+deixa|preciso\s+me\s+lembrar|tenho\s+que\s+me\s+lembrar)\b/,
+      // "toma nota", "pega essa informação"
+      /\b(toma\s+nota|pega\s+essa\s+(informac|info))\b/,
+      // "deixa anotado", "fica registrado"
+      /\b(deixa|fica)\s+(anotado|registrado|salvo|guardado)\b/,
     ],
     extractEntities: (text: string): ExtractedEntities => {
+      const reminderInfo = extractReminderInfo(text);
       return {
         description: extractNoteContent(text),
+        date: reminderInfo.date,
+        time: reminderInfo.time,
+        hasDateReference: reminderInfo.hasDateReference,
       };
     },
   },
@@ -81,6 +103,8 @@ export const notesPatterns = [
       /\b(o que)\b.*(anotei|salvei|guardei|registrei|gravei|tenho anotado|tenho salvo)/,
       // "tem algum lembrete?", "tem nota?"
       /\b(tem|tenho|existe)\b.*\b(lembrete|nota|anotacao|recado)\b/,
+      // "ve minhas notas", "puxa as anotações"
+      /\b(ve|veja|pux[ae]|traz|traga|recuper[ae])\b.*(notas?|anotac|lembrete)/,
     ],
     extractEntities: (): ExtractedEntities => ({}),
   },

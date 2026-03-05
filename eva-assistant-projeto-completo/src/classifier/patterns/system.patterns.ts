@@ -1,6 +1,43 @@
 import { IntentType, ExtractedEntities } from '../../types';
 
 export const systemPatterns = [
+  // --- PERGUNTA SOBRE EVA (must come before AJUDA to catch specific capability questions) ---
+  {
+    intent: IntentType.PERGUNTA_SOBRE_EVA,
+    confidence: 0.92,
+    patterns: [
+      // "como faço para treinar você/eva"
+      /\b(como)\b.*(faco|faz|posso|consigo|devo)\b.*(treinar|ensinar|configurar|personalizar|customizar)\b.*(voce|vc|eva|bot|agente|atendente|assistente)?/,
+      // "como treinar a eva", "como ensinar o bot"
+      /\b(como)\b.*(treinar|ensinar|configurar|personalizar)\b.*(eva|bot|agente|atendente|assistente)/,
+      // "dá pra/posso treinar você", "consigo ensinar o bot"
+      /\b(da pra|posso|consigo|tem como|eh possivel|e possivel)\b.*(treinar|ensinar|configurar|personalizar|customizar)\b/,
+      // "quero que você atenda meus clientes", "quero que você atenda por mim"
+      /\b(quero|gostaria|preciso)\b.*(que)?\b.*(voce|vc|eva|bot)\b.*(atend|respond|convers|fal|vend|ajud)\b/,
+      // "como faço pra ela/voce atender meus clientes"
+      /\b(como)\b.*(faco|faz|posso)\b.*(ela|voce|vc|eva)\b.*(atend|respond|convers)/,
+      // "como funciona o atendente", "como funciona o modo conversa"
+      /\b(como)\b.*(funciona|usa[r]?|ativa|configura)\b.*(atendente|modo conversa|modo vendas|conversa livre|chat)/,
+      // "você pode atender meus clientes?", "voce consegue vender?"
+      /\b(voce|vc|eva)\b.*(pode|consegue|sabe|da pra)\b.*(atend|respond|vend|convers|fal)\b/,
+      // "o que é o modo atendente", "o que é conversa livre"
+      /\b(o que e|que e|que significa)\b.*(atendente|conversa livre|modo conversa|modo vendas)/,
+      // "como você funciona", "como a eva funciona"
+      /\b(como)\b.*(voce|vc|eva|isso aqui|essa assistente)\b.*(funciona|trabalha|opera)/,
+      // "posso usar você para atender clientes"
+      /\b(posso|consigo|da pra|tem como)\b.*(usar)\b.*(voce|vc|eva)\b.*(para|pra)\b/,
+      // "quais planos disponíveis", "quanto custa"
+      /\b(quais?|quanto)\b.*(planos?|custa|preco|valor|assinatura|mensalidade)/,
+      // "tem como integrar", "integra com"
+      /\b(tem como|da pra|posso|consigo)\b.*(integrar|conectar|ligar|vincular)\b/,
+      // "voce aprende", "voce memoriza"
+      /\b(voce|vc|eva)\b.*(aprende|memoriza|lembra|guarda|salva)\b.*(o que|das|dos|de)?\b/,
+      // "como cadastrar produtos", "como adicionar preços"
+      /\b(como)\b.*(cadastrar|adicionar|colocar|registrar)\b.*(produto|preco|servico|informac|conhecimento|faq)/,
+    ],
+    extractEntities: (): ExtractedEntities => ({}),
+  },
+
   // --- SAUDAÇÃO ---
   {
     intent: IntentType.SAUDACAO,
@@ -13,6 +50,10 @@ export const systemPatterns = [
       /^como esta(?!\s+me?u|\s+minha)\b/,
       // "bom dia Eva", "oi Eva"
       /^(oi|ola|bom dia|boa tarde|boa noite)\s+(eva|assistente)\b/,
+      // More greetings
+      /^(fala[, ]+(ai|tu|vc|voce|eva)|e nois|firmeza|tranquilo|boa|dae)\b/,
+      // "olá, tudo bem?"
+      /^(ola|oi|eai),?\s*(tudo\s+(bem|bom|certo|tranquilo))\b/,
     ],
     extractEntities: (): ExtractedEntities => ({}),
   },
@@ -32,6 +73,10 @@ export const systemPatterns = [
       // "pra que serve", "qual sua função"
       /\b(pra que|para que)\b.*(serve|voce serve|vc serve)\b/,
       /\b(qual)\b.*(sua|tua)\b.*(funcao|utilidade|finalidade)\b/,
+      // "me mostra o menu", "lista de comandos"
+      /\b(mostr[ae]|lista)\b.*(menu|comandos|funcoes|opcoes)\b/,
+      // "instrucoes", "tutorial"
+      /\b(instruc[oõ]es|tutorial|guia|manual)\b/,
     ],
     extractEntities: (): ExtractedEntities => ({}),
   },
