@@ -82,7 +82,8 @@ export const PLAN_LIMITS = {
     transactionsPerMonth: 100,
     notesMax: 30,
     reportsEnabled: false,
-    audioEnabled: false,
+    audioEnabled: true,
+    audioMaxSeconds: 60,
   },
   PROFESSIONAL: {
     messagesPerDay: 500,
@@ -91,6 +92,7 @@ export const PLAN_LIMITS = {
     notesMax: 200,
     reportsEnabled: true,
     audioEnabled: true,
+    audioMaxSeconds: 300,
   },
   ENTERPRISE: {
     messagesPerDay: Infinity,
@@ -99,6 +101,7 @@ export const PLAN_LIMITS = {
     notesMax: Infinity,
     reportsEnabled: true,
     audioEnabled: true,
+    audioMaxSeconds: 600,
   },
 } as const;
 

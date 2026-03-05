@@ -20,15 +20,27 @@ class MessageRouter {
     try {
       // 1. Pré-processamento: transcrever áudio se necessário
       let text = message.text;
+      let isFromAudio = false;
+
       if (!text && message.audio) {
+        // Validate audio duration
+        if (message.audio.seconds && message.audio.seconds > 300) {
+          await whatsappClient.sendText(
+            message.phone,
+            '⚠️ O áudio é muito longo (máximo 5 minutos). Pode enviar um áudio mais curto ou digitar? 📝'
+          );
+          return;
+        }
+
         text = await audioTranscriber.transcribe(message.audio);
         if (!text) {
           await whatsappClient.sendText(
             message.phone,
-            '❌ Não consegui entender o áudio. Pode tentar novamente ou enviar por texto?'
+            '❌ Não consegui entender o áudio. Tente falar mais perto do microfone, em um local silencioso, ou envie por texto. 🎤'
           );
           return;
         }
+        isFromAudio = true;
       }
 
       if (!text) {
@@ -72,7 +84,13 @@ class MessageRouter {
 
       // 4. Enviar resposta (usa phone para WhatsApp)
       if (response.text) {
-        await whatsappClient.sendText(message.phone, response.text);
+        // If message was from audio, prepend the transcription so user knows what was understood
+        let finalText = response.text;
+        if (isFromAudio && text) {
+          const preview = text.length > 120 ? text.substring(0, 120) + '...' : text;
+          finalText = `🎤 _"${preview}"_\n\n${response.text}`;
+        }
+        await whatsappClient.sendText(message.phone, finalText);
       }
 
       if (response.document) {
