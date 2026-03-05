@@ -20,9 +20,10 @@ Sua ÚNICA função é analisar a mensagem do usuário e retornar um JSON com a 
 - FALAR_COM_HUMANO — Cliente quer falar com pessoa real / atendente humano
 - CONVERSA_LIVRE — Mensagem que não é comando, é conversa natural (quando modo atendente está ativo)
 - RELATORIO — Solicitar relatório financeiro ou de agenda
-- AJUDA — Perguntar o que o bot faz ou como usar
-- SAUDACAO — Cumprimento (oi, bom dia, etc.)
-- DESCONHECIDO — Não se encaixa em nenhuma categoria
+- AJUDA — Perguntar o que o bot faz ou pedir menu de comandos
+- PERGUNTA_SOBRE_EVA — Perguntar COMO USAR uma funcionalidade da EVA, sobre capacidades, dicas de uso, planos/preços, como treinar/configurar o atendente
+- SAUDACAO — Cumprimento simples (oi, bom dia, etc.) SEM nenhuma pergunta
+- DESCONHECIDO — Não se encaixa em absolutamente nenhuma categoria acima
 
 ## Entities para Extrair:
 - date: data no formato YYYY-MM-DD (calcule a partir de hoje)
@@ -30,19 +31,44 @@ Sua ÚNICA função é analisar a mensagem do usuário e retornar um JSON com a 
 - amount: valor numérico (sem R$, sem pontos de milhar)
 - category: categoria financeira (alimentacao, transporte, moradia, contas, saude, educacao, lazer, impostos, vendas, servicos, salario, comissoes, rendimentos, outros)
 - title: título do evento ou nota
-- description: descrição adicional
+- description: descrição adicional ou conteúdo da pergunta
 - location: local do evento
 - person: nome de pessoa mencionada
 - period: período temporal (today, tomorrow, week, month)
 
-## Regras Importantes:
-1. Se o usuário menciona dinheiro + gasto → REGISTRAR_DESPESA
-2. Se menciona dinheiro + recebimento → REGISTRAR_RECEITA
-3. "Anota", "lembra", "nota:" → ANOTAR (extrair conteúdo após a palavra-chave)
-4. Gírias: "conto" = reais, "joga lá" = registrar, "tô apertado" = CONSULTAR_SALDO
-5. Se ambíguo entre ANOTAR e AGENDAR, prefira AGENDAR se houver data/horário
+## Regras Críticas de Classificação (SIGA NA ORDEM):
 
-## Formato de Resposta (SOMENTE JSON, sem markdown):
+### 1. PERGUNTAS sobre a EVA → PERGUNTA_SOBRE_EVA
+Se o usuário faz uma PERGUNTA sobre como usar a EVA, capacidades, configurações, ou como funciona alguma feature:
+- "como faço para treinar pra ela atender os clientes" → PERGUNTA_SOBRE_EVA
+- "como funciona o atendente?" → PERGUNTA_SOBRE_EVA
+- "dá pra você atender meus clientes?" → PERGUNTA_SOBRE_EVA
+- "como configuro o modo vendas?" → PERGUNTA_SOBRE_EVA
+- "o que você consegue fazer?" → AJUDA (pedir lista geral = AJUDA)
+- "como cadastro um produto?" → PERGUNTA_SOBRE_EVA
+- "você aprende?" → PERGUNTA_SOBRE_EVA
+- "quais os planos?" → PERGUNTA_SOBRE_EVA
+- "como funciona a agenda?" → PERGUNTA_SOBRE_EVA
+
+### 2. Dinheiro + contexto de gasto → REGISTRAR_DESPESA
+### 3. Dinheiro + contexto de recebimento → REGISTRAR_RECEITA
+
+### 4. Comando explícito de anotar/lembrar → ANOTAR
+- "anota: ligar pro contador" → ANOTAR
+- "não me deixa esquecer de comprar leite" → ANOTAR
+
+### 5. Data/horário + evento → AGENDAR
+
+### 6. Gírias: "conto" = mil reais, "tô apertado/liso" = CONSULTAR_SALDO
+
+### 7. Ambiguidades:
+- Se há data/horário E parece nota → prefira AGENDAR
+- Se é PERGUNTA sobre a EVA (como fazer algo NA EVA) → NÃO é ANOTAR, é PERGUNTA_SOBRE_EVA
+- TREINAR_AGENTE só quando começa com "treinar:", "ensinar:", "cadastrar:"
+- ANOTAR requer verbo de anotação OU expressão de "lembrar/não esquecer"
+- Não classifique como ANOTAR precipitadamente se não houver verbo claro de anotação
+
+## Formato de Resposta (SOMENTE JSON, sem markdown, sem explicações):
 {
   "intent": "INTENT_TYPE",
   "entities": { ... },

@@ -30,8 +30,24 @@ class NotesService {
 
       const tags = note.tags.length > 0 ? `\n🏷️ ${note.tags.map(t => `#${t}`).join(' ')}` : '';
 
+      // Check if user provided a date/time for reminder
+      const hasDateReference = entities.hasDateReference as boolean | undefined;
+      const reminderDate = entities.date as string | undefined;
+      const reminderTime = entities.time as string | undefined;
+
+      let reminderInfo = '';
+      if (reminderDate || reminderTime) {
+        // User provided date/time — confirm the reminder
+        const datePart = reminderDate ? ` em *${this.formatDateBR(reminderDate)}*` : '';
+        const timePart = reminderTime ? ` às *${reminderTime}*` : '';
+        reminderInfo = `\n\n⏰ Lembrete configurado${datePart}${timePart}`;
+      } else if (!hasDateReference) {
+        // No date provided — ask when to be reminded
+        reminderInfo = '\n\n💡 _Quer que eu te lembre em alguma data? Me diz quando! Ex: "amanhã", "segunda", "dia 15"_';
+      }
+
       return {
-        text: `Anotado! ✅\n\n📝 "${content}"${tags}`,
+        text: `Anotado! ✅\n\n📝 "${content}"${tags}${reminderInfo}`,
       };
     } catch (error) {
       console.error('❌ Erro ao criar nota:', error);
@@ -141,6 +157,15 @@ class NotesService {
     if (/\b(telefone|celular|whatsapp|email|contato)\b/.test(normalized)) tags.push('contato');
 
     return tags;
+  }
+
+  private formatDateBR(isoDate: string): string {
+    try {
+      const [year, month, day] = isoDate.split('-');
+      return `${day}/${month}/${year}`;
+    } catch {
+      return isoDate;
+    }
   }
 }
 

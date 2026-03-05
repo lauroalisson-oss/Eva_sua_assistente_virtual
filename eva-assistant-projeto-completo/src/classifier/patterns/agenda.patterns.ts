@@ -2,12 +2,12 @@ import { IntentType, ExtractedEntities } from '../../types';
 import { extractDateFromText, extractTimeFromText } from '../../utils/date-parser';
 import { extractAfterKeyword, extractPerson, extractLocation } from '../../utils/text-helpers';
 
-// Common event type words
-const EVENT_TYPES = 'reuniao|encontro|compromisso|consulta|evento|visita|entrevista|apresentacao|palestra|aula|treino|sessao|audiencia';
-// Scheduling verbs
-const SCHEDULE_VERBS = 'marca|agendar?|marcar?|criar?|cadastrar?|incluir?|adicionar?|botar?|colocar?|por';
-// Day references
-const DAY_REFS = 'amanha|hoje|segunda|terca|quarta|quinta|sexta|sabado|domingo|proxim|semana que vem|depois de amanha';
+// Common event type words (expanded)
+const EVENT_TYPES = 'reuniao|encontro|compromisso|consulta|evento|visita|entrevista|apresentacao|palestra|aula|treino|sessao|audiencia|call|meeting|alinhamento|daily|standup|retorno|checkup|exame|prova|dentista|medico|advocacia|jogo|partida|cerimonia|festa|aniversario|casamento';
+// Scheduling verbs (expanded)
+const SCHEDULE_VERBS = 'marca|agendar?|marcar?|criar?|cadastrar?|incluir?|adicionar?|botar?|colocar?|por|agenda|reservar?|programar?|combinar?|confirmar?';
+// Day references (expanded)
+const DAY_REFS = 'amanha|hoje|segunda|terca|quarta|quinta|sexta|sabado|domingo|proxim|semana que vem|depois de amanha|no dia|dia \\d|daqui a|proximo mes|mes que vem|essa semana|esta semana';
 // Edit verbs
 const EDIT_VERBS = 'mud[ao]r?|alter[ao]r?|trocar?|adiar?|reagend[ao]r?|antecipar?|postergar?|atrasa[r]?|pass[ao]r?|corrig[ei]r?|atualiz[ao]r?|remarca[r]?|transferir?';
 // Cancel verbs

@@ -3,9 +3,9 @@ import { extractCurrency } from '../../utils/currency-parser';
 import { extractCategory } from '../../utils/text-helpers';
 
 // Expense verbs (expanded)
-const EXPENSE_VERBS = 'gastei|gastou|gasto|paguei|pagou|comprei|comprou|despesa|torrei|desembolsei|investi|banquei';
+const EXPENSE_VERBS = 'gastei|gastou|gasto|paguei|pagou|comprei|comprou|despesa|torrei|desembolsei|investi|banquei|perdi|contribui|doei|doou|dei|financiei|larguei|soltei';
 // Income verbs (expanded)
-const INCOME_VERBS = 'recebi|recebeu|entrada|faturei|faturou|vendi|vendeu|ganhei|ganhou|lucrei|lucrou|embolsei|caiu|entrou|creditou';
+const INCOME_VERBS = 'recebi|recebeu|entrada|faturei|faturou|vendi|vendeu|ganhei|ganhou|lucrei|lucrou|embolsei|caiu|entrou|creditou|depositou|depositaram|transferiram|cobrei|arrecadei|fiz|fechei';
 // Transaction types for cancellation
 const TRANSACTION_TYPES = 'gasto|despesa|receita|transacao|lancamento|registro|pagamento|compra|venda|entrada|saida|debito|credito';
 // Cancel verbs
