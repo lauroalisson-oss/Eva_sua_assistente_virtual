@@ -83,6 +83,12 @@ export interface AudioMessage {
   url: string;
   mimetype: string;
   seconds: number;
+  /** Message key from Evolution API — needed for getBase64FromMediaMessage */
+  messageKey?: {
+    remoteJid: string;
+    fromMe: boolean;
+    id: string;
+  };
 }
 
 /**
