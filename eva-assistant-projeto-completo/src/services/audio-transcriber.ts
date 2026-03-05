@@ -7,6 +7,8 @@ let groq: Groq | null = null;
 
 if (env.GROQ_API_KEY) {
   groq = new Groq({ apiKey: env.GROQ_API_KEY });
+} else {
+  console.warn('⚠️ GROQ_API_KEY não configurada — transcrição de áudio desativada.');
 }
 
 /**
@@ -58,31 +60,49 @@ const PT_BR_CORRECTIONS: Array<[RegExp, string]> = [
   [/\s{2,}/g, ' '],
 ];
 
+/** Error codes for differentiated error handling */
+export enum AudioError {
+  NO_API_KEY = 'NO_API_KEY',
+  DOWNLOAD_FAILED = 'DOWNLOAD_FAILED',
+  TRANSCRIPTION_FAILED = 'TRANSCRIPTION_FAILED',
+  AUDIO_TOO_LONG = 'AUDIO_TOO_LONG',
+  EMPTY_RESULT = 'EMPTY_RESULT',
+}
+
+export interface TranscriptionResult {
+  text: string | null;
+  error?: AudioError;
+}
+
 class AudioTranscriber {
   /**
    * Transcreve um áudio do WhatsApp para texto usando Groq (Whisper v3).
    * Inclui retry automático, normalização PT-BR e validação de duração.
+   *
+   * Fluxo de download:
+   * 1. Tenta via Evolution API getBase64FromMediaMessage (método correto para v2.x)
+   * 2. Fallback: download direto da URL do webhook (para URLs pré-autenticadas)
    */
-  async transcribe(audio: AudioMessage): Promise<string | null> {
+  async transcribe(audio: AudioMessage): Promise<TranscriptionResult> {
     if (!groq) {
-      console.warn('⚠️ GROQ_API_KEY não configurada. Áudio não será transcrito.');
-      return null;
+      console.error('❌ GROQ_API_KEY não configurada. Defina no .env para habilitar transcrição.');
+      return { text: null, error: AudioError.NO_API_KEY };
     }
 
     // Validate audio duration
     if (audio.seconds && audio.seconds > MAX_AUDIO_SECONDS) {
       console.warn(`⚠️ Áudio muito longo (${audio.seconds}s > ${MAX_AUDIO_SECONDS}s)`);
-      return null;
+      return { text: null, error: AudioError.AUDIO_TOO_LONG };
     }
 
     try {
       console.log(`🎤 Transcrevendo áudio (${audio.seconds}s, ${audio.mimetype})...`);
 
-      // 1. Download audio with retry
-      const audioBuffer = await this.downloadWithRetry(audio.url);
+      // 1. Download audio — try Evolution API first, then direct URL
+      const audioBuffer = await this.downloadAudio(audio);
       if (!audioBuffer) {
-        console.error('❌ Falha ao baixar áudio após retentativas');
-        return null;
+        console.error('❌ Falha ao baixar áudio por todos os métodos');
+        return { text: null, error: AudioError.DOWNLOAD_FAILED };
       }
 
       // 2. Determine the correct file extension from mimetype
@@ -94,7 +114,7 @@ class AudioTranscriber {
       // 3. Transcribe with retry (Groq can have transient failures)
       const text = await this.transcribeWithRetry(audioFile);
       if (!text) {
-        return null;
+        return { text: null, error: AudioError.TRANSCRIPTION_FAILED };
       }
 
       // 4. Post-process: normalize PT-BR transcription
@@ -102,19 +122,62 @@ class AudioTranscriber {
 
       if (!normalized) {
         console.warn('⚠️ Transcrição resultou em texto vazio após normalização');
-        return null;
+        return { text: null, error: AudioError.EMPTY_RESULT };
       }
 
       console.log(`✅ Transcrição: "${normalized.substring(0, 80)}${normalized.length > 80 ? '...' : ''}"`);
-      return normalized;
+      return { text: normalized };
     } catch (error) {
       console.error('❌ Erro na transcrição:', error);
-      return null;
+      return { text: null, error: AudioError.TRANSCRIPTION_FAILED };
     }
   }
 
   /**
-   * Downloads media with retry (Evolution API URLs can be flaky).
+   * Downloads audio using the best available method:
+   * 1. Evolution API getBase64FromMediaMessage (primary — works with v2.x)
+   * 2. Direct URL download with retry (fallback)
+   */
+  private async downloadAudio(audio: AudioMessage): Promise<Buffer | null> {
+    // Method 1: Evolution API getBase64FromMediaMessage (preferred for v2.x)
+    if (audio.messageKey) {
+      console.log('📥 Tentando download via Evolution API getBase64FromMediaMessage...');
+      const buffer = await this.downloadViaEvolutionApi(audio.messageKey);
+      if (buffer) return buffer;
+      console.warn('⚠️ Fallback: tentando download direto da URL...');
+    } else {
+      console.warn('⚠️ messageKey não disponível, tentando download direto da URL...');
+    }
+
+    // Method 2: Direct URL download with retry (fallback)
+    return this.downloadWithRetry(audio.url);
+  }
+
+  /**
+   * Downloads media via Evolution API getBase64FromMediaMessage endpoint.
+   * Retries up to 2 times with exponential backoff.
+   */
+  private async downloadViaEvolutionApi(
+    messageKey: { remoteJid: string; fromMe: boolean; id: string },
+    maxRetries = 2
+  ): Promise<Buffer | null> {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      const buffer = await whatsappClient.getBase64Media(messageKey);
+      if (buffer && buffer.length > 0) {
+        return buffer;
+      }
+
+      if (attempt < maxRetries) {
+        const delay = attempt * 1500; // 1.5s, 3s
+        console.warn(`⚠️ Evolution API download falhou (tentativa ${attempt}/${maxRetries}), retry em ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Downloads media via direct URL with retry (Evolution API URLs can be flaky).
    */
   private async downloadWithRetry(url: string, maxRetries = 3): Promise<Buffer | null> {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -125,7 +188,7 @@ class AudioTranscriber {
 
       if (attempt < maxRetries) {
         const delay = attempt * 1000; // 1s, 2s, 3s
-        console.warn(`⚠️ Download falhou (tentativa ${attempt}/${maxRetries}), retry em ${delay}ms...`);
+        console.warn(`⚠️ Download direto falhou (tentativa ${attempt}/${maxRetries}), retry em ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
@@ -168,7 +231,7 @@ class AudioTranscriber {
    * Normalizes Whisper PT-BR transcription output.
    * Removes artifacts, fixes common errors, and cleans up the text.
    */
-  private normalizeTranscription(text: string): string {
+  normalizeTranscription(text: string): string {
     let result = text.trim();
 
     // Apply all PT-BR corrections

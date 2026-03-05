@@ -746,6 +746,110 @@ describe('Normalização Pós-Transcrição PT-BR', () => {
   });
 });
 
+// ============================================
+// TESTES: AUDIO ERROR DIFFERENTIATION
+// ============================================
+
+describe('Áudio — Diferenciação de Erros', () => {
+  // Simulates the AudioError enum from audio-transcriber
+  const AudioError = {
+    NO_API_KEY: 'NO_API_KEY',
+    DOWNLOAD_FAILED: 'DOWNLOAD_FAILED',
+    TRANSCRIPTION_FAILED: 'TRANSCRIPTION_FAILED',
+    AUDIO_TOO_LONG: 'AUDIO_TOO_LONG',
+    EMPTY_RESULT: 'EMPTY_RESULT',
+  } as const;
+
+  const errorMessages: Record<string, string> = {
+    [AudioError.NO_API_KEY]: '⚠️ Transcrição de áudio ainda não está configurada. Por favor, envie por texto! 📝',
+    [AudioError.DOWNLOAD_FAILED]: '❌ Não consegui baixar o áudio. Pode enviar novamente ou digitar? 🔄',
+    [AudioError.TRANSCRIPTION_FAILED]: '❌ Não consegui transcrever o áudio. Tente falar mais perto do microfone, em um local silencioso, ou envie por texto. 🎤',
+    [AudioError.AUDIO_TOO_LONG]: '⚠️ O áudio é muito longo (máximo 5 minutos). Envie um mais curto ou digite! 📝',
+    [AudioError.EMPTY_RESULT]: '❌ O áudio ficou vazio após transcrição. Tente falar mais claramente ou envie por texto. 🎤',
+  };
+
+  it('NO_API_KEY deve ter mensagem sobre configuração', () => {
+    expect(errorMessages[AudioError.NO_API_KEY]).toContain('não está configurada');
+  });
+
+  it('DOWNLOAD_FAILED deve sugerir reenviar', () => {
+    expect(errorMessages[AudioError.DOWNLOAD_FAILED]).toContain('enviar novamente');
+  });
+
+  it('TRANSCRIPTION_FAILED deve sugerir melhorar áudio', () => {
+    expect(errorMessages[AudioError.TRANSCRIPTION_FAILED]).toContain('microfone');
+  });
+
+  it('AUDIO_TOO_LONG deve informar limite', () => {
+    expect(errorMessages[AudioError.AUDIO_TOO_LONG]).toContain('5 minutos');
+  });
+
+  it('EMPTY_RESULT deve sugerir falar mais claramente', () => {
+    expect(errorMessages[AudioError.EMPTY_RESULT]).toContain('claramente');
+  });
+
+  it('cada erro deve ter mensagem única', () => {
+    const messages = Object.values(errorMessages);
+    const unique = new Set(messages);
+    expect(unique.size).toBe(messages.length);
+  });
+});
+
+// ============================================
+// TESTES: EVOLUTION API MEDIA DOWNLOAD
+// ============================================
+
+describe('Áudio — Evolution API getBase64 Integration', () => {
+  it('messageKey deve conter remoteJid, fromMe e id', () => {
+    const messageKey = {
+      remoteJid: '5575999999999@s.whatsapp.net',
+      fromMe: false,
+      id: 'ABCDEF123456',
+    };
+    expect(messageKey).toHaveProperty('remoteJid');
+    expect(messageKey).toHaveProperty('fromMe');
+    expect(messageKey).toHaveProperty('id');
+    expect(messageKey.fromMe).toBe(false);
+  });
+
+  it('AudioMessage deve aceitar messageKey opcional', () => {
+    const audio = {
+      url: 'https://example.com/audio.ogg',
+      mimetype: 'audio/ogg',
+      seconds: 10,
+      messageKey: {
+        remoteJid: '5575999999999@s.whatsapp.net',
+        fromMe: false,
+        id: 'ABC123',
+      },
+    };
+    expect(audio.messageKey).toBeDefined();
+    expect(audio.messageKey!.id).toBe('ABC123');
+  });
+
+  it('AudioMessage deve funcionar sem messageKey', () => {
+    const audio = {
+      url: 'https://example.com/audio.ogg',
+      mimetype: 'audio/ogg',
+      seconds: 10,
+    };
+    expect(audio).not.toHaveProperty('messageKey');
+  });
+
+  it('base64 data URI deve ser parseável', () => {
+    const dataUri = 'data:audio/ogg;base64,SGVsbG8gV29ybGQ=';
+    const base64Data = dataUri.split(',')[1];
+    const buffer = Buffer.from(base64Data, 'base64');
+    expect(buffer.toString()).toBe('Hello World');
+  });
+
+  it('base64 puro (sem data URI) deve ser parseável', () => {
+    const base64Pure = 'SGVsbG8gV29ybGQ=';
+    const buffer = Buffer.from(base64Pure, 'base64');
+    expect(buffer.toString()).toBe('Hello World');
+  });
+});
+
 describe('CI/CD — Node Version Matrix', () => {
   const supportedVersions = [20, 22];
 

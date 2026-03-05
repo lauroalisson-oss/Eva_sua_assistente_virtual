@@ -1,7 +1,7 @@
 import { IncomingMessage, ResponseMessage } from '../types';
 import { hybridClassifier } from '../classifier/hybrid-classifier';
 import { whatsappClient } from './whatsapp-client';
-import { audioTranscriber } from './audio-transcriber';
+import { audioTranscriber, AudioError } from './audio-transcriber';
 import { agendaService } from '../modules/agenda/agenda.service';
 import { financeService } from '../modules/finance/finance.service';
 import { notesService } from '../modules/notes/notes.service';
@@ -32,12 +32,18 @@ class MessageRouter {
           return;
         }
 
-        text = await audioTranscriber.transcribe(message.audio);
+        const result = await audioTranscriber.transcribe(message.audio);
+        text = result.text;
         if (!text) {
-          await whatsappClient.sendText(
-            message.phone,
-            '❌ Não consegui entender o áudio. Tente falar mais perto do microfone, em um local silencioso, ou envie por texto. 🎤'
-          );
+          const errorMessages: Record<string, string> = {
+            [AudioError.NO_API_KEY]: '⚠️ Transcrição de áudio ainda não está configurada. Por favor, envie por texto! 📝',
+            [AudioError.DOWNLOAD_FAILED]: '❌ Não consegui baixar o áudio. Pode enviar novamente ou digitar? 🔄',
+            [AudioError.TRANSCRIPTION_FAILED]: '❌ Não consegui transcrever o áudio. Tente falar mais perto do microfone, em um local silencioso, ou envie por texto. 🎤',
+            [AudioError.AUDIO_TOO_LONG]: '⚠️ O áudio é muito longo (máximo 5 minutos). Envie um mais curto ou digite! 📝',
+            [AudioError.EMPTY_RESULT]: '❌ O áudio ficou vazio após transcrição. Tente falar mais claramente ou envie por texto. 🎤',
+          };
+          const msg = result.error ? errorMessages[result.error] : errorMessages[AudioError.TRANSCRIPTION_FAILED];
+          await whatsappClient.sendText(message.phone, msg);
           return;
         }
         isFromAudio = true;

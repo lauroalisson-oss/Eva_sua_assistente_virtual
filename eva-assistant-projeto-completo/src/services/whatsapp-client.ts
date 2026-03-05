@@ -79,8 +79,68 @@ class WhatsAppClient {
   }
 
   /**
-   * Baixa uma mídia (áudio) do WhatsApp via URL temporária.
-   * Tenta primeiro sem autenticação, depois com apikey da Evolution API.
+   * Baixa mídia via Evolution API getBase64FromMediaMessage endpoint.
+   * Este é o método correto para Evolution API v2.x — a URL no webhook
+   * geralmente é uma URL do CDN do WhatsApp que expira rapidamente.
+   */
+  async getBase64Media(messageKey: { remoteJid: string; fromMe: boolean; id: string }): Promise<Buffer | null> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/chat/getBase64FromMediaMessage/${this.instance}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: this.apiKey,
+          },
+          body: JSON.stringify({
+            message: {
+              key: messageKey,
+            },
+          }),
+          signal: AbortSignal.timeout(30000),
+        }
+      );
+
+      if (!response.ok) {
+        console.error(`❌ getBase64FromMediaMessage falhou: HTTP ${response.status}`);
+        return null;
+      }
+
+      const data = await response.json() as Record<string, unknown>;
+
+      // Evolution API v2.x returns { base64: "data:audio/ogg;base64,..." }
+      const base64String = (data.base64 || data.mediaUrl || '') as string;
+
+      if (!base64String) {
+        console.error('❌ getBase64FromMediaMessage retornou sem dados de mídia');
+        return null;
+      }
+
+      // Strip data URI prefix if present (e.g., "data:audio/ogg;base64,")
+      const base64Data = base64String.includes(',')
+        ? base64String.split(',')[1]
+        : base64String;
+
+      const buffer = Buffer.from(base64Data, 'base64');
+
+      if (buffer.length === 0) {
+        console.error('❌ Buffer base64 decodificado está vazio');
+        return null;
+      }
+
+      console.log(`📥 Mídia baixada via Evolution API: ${(buffer.length / 1024).toFixed(1)}KB`);
+      return buffer;
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error(`❌ Erro getBase64FromMediaMessage: ${msg}`);
+      return null;
+    }
+  }
+
+  /**
+   * Baixa uma mídia (áudio) do WhatsApp via URL direta.
+   * Fallback para quando getBase64FromMediaMessage não funciona.
    */
   async downloadMedia(mediaUrl: string): Promise<Buffer | null> {
     try {
@@ -96,7 +156,7 @@ class WhatsAppClient {
       }
 
       if (!response.ok) {
-        console.error(`❌ Download falhou: HTTP ${response.status}`);
+        console.error(`❌ Download direto falhou: HTTP ${response.status}`);
         return null;
       }
 
@@ -108,11 +168,11 @@ class WhatsAppClient {
         return null;
       }
 
-      console.log(`📥 Mídia baixada: ${(buffer.length / 1024).toFixed(1)}KB`);
+      console.log(`📥 Mídia baixada via URL direta: ${(buffer.length / 1024).toFixed(1)}KB`);
       return buffer;
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      console.error(`❌ Erro ao baixar mídia: ${msg}`);
+      console.error(`❌ Erro ao baixar mídia via URL: ${msg}`);
       return null;
     }
   }

@@ -220,6 +220,11 @@ export async function whatsappWebhook(
             url: data.message!.audioMessage!.url,
             mimetype: data.message!.audioMessage!.mimetype,
             seconds: data.message!.audioMessage!.seconds || 0,
+            messageKey: {
+              remoteJid: data.key.remoteJid,
+              fromMe: data.key.fromMe,
+              id: data.key.id,
+            },
           }
         : null,
       messageId,
